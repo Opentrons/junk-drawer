@@ -29,6 +29,9 @@ poetry run pytest
 # run tests in watch mode
 poetry run ptw
 
+# run formatting
+poetry run black .
+
 # run lints
 poetry run pylama
 
