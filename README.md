@@ -20,50 +20,95 @@ pip install junk-drawer
 from junk_drawer import Store
 from pydantic import BaseModel
 
-class MyModel(Schema):
+class MyModel(BaseModel):
     name: str
 
 async def main():
-    store = await Store.create("./data/my_store", schema=MyModel)
+    store = await Store.create("path/to/store", schema=MyModel)
 ```
 
-Use [Pydantic][] to define your models. When this store is initialized, it will create the directory `${cwd}/data/my_store` if it doesn't already exist.
+Use [Pydantic][] to define your models. When this store is initialized, it will create the directory `${cwd}/path/to/store` if it doesn't already exist.
 
 [pydantic]: https://pydantic-docs.helpmanual.io/
 
-### Add items to the store
+### Get an item from the store
 
 ```py
 async def main():
     item = MyModel(name="fizzbuzz")
-    store = await Store.create("./data/my_store", schema=MyModel)
+    store = await Store.create("path/to/store", schema=MyModel)
+    item = await store.get("some-key")
+```
 
-    # add an item to the store
+The store has the following methods for getting items and keys from the store.
+
+- `store.get(key)`
+  - Gets an item by key from the store, if that key exists and item passes validation
+- `store.exists(key)`
+  - Checks whether a given key exists in the store (does not read or check the item itself)
+- `store.get_all_items()`
+  - Returns all items in the store
+- `store.get_all_keys()`
+  - Returns all items in the store
+- `store.get_all_entries()`
+  - Returns all items in the store zipped in tuples with their keys
+
+### Add an item to the store
+
+```py
+async def main():
+    item = MyModel(name="fizzbuzz")
+    store = await Store.create("path/to/store", schema=MyModel)
+    item_key = await store.add(item, "some-key")
+```
+
+The store has the following methods that may add an item at a specific key. The key will be used as the name of the JSON file and **should not begin with a dot**.
+
+- `store.add(item, key)`
+  - Adds an item to the store as long as the item's key doesn't already exist
+- `store.put(item, key)`
+  - Adds an item to the store or updates an existing item if the key already exists
+- `store.ensure(default_item, key)`
+  - Gets an item by key, inserting a default value if the key doesn't exist
+  - Basically a shortcut for `get` followed by `add` if `get` returned `None`
+
+The snippet above will create the following directory and file:
+
+Directory: `{cwd}/path/to/store`
+
+- File: `some-key.json`
+  - Contents: `{ "name": "fizzbuzz" }`
+
+#### Add an item using key from model
+
+```py
+class KeyedModel(BaseModel):
+    uid: UUID
+    name: str
+
+async def main():
+    item = ModelWithKey(uid=uuid4(), name="fizzbuzz")
+    store = await Store.create("store", schema=KeyedModel, primary_key="uid")
     item_key = await store.add(item)
 ```
 
-The store has three methods that may add an item:
+If you specify the `primary_key` option when creating the store, `add`, `put`, and `ensure` will use the value of `primary_key` from the item to determine the key. The value of `primary_key` will be converted to a `str` before use and **should not begin with a dot**.
 
-- `store.add` - Adds an item to the store as long as the item's key doesn't already exist
-- `store.put` - Adds an item to the store or updates an existing item if the key already exists
-- `store.ensure` - Get an item by key, inserting a default value if the key doesn't exist
+### Remove an item from the store
 
-By default, the store will generate a UUID for the key and create a JSON file using that key as the filename.
+```py
+async def main():
+    item = MyModel(name="fizzbuzz")
+    store = await Store.create("path/to/store", schema=MyModel)
 
-- Directory: `{cwd}/data/my_store`
-  - File: `{item_key}.json`
-    - Contents: `{ "name": "fizzbuzz" }`
+    removed_key = await store.delete("some-key")
+```
 
-### Add items to the store with a specific key
+If you specify the `primary_key` option when creating the store, store modification operations will use the value of `primary_key` from the item to determine the key. The value of `primary_key` will be converted to a `str` before use and **should not begin with a dot**.
 
-There are two ways to insert items into the store with a specific key:
-
-- Pass a key paramter to `add`, `put`, or `ensure`
-  - `key = await store.put(item, key)`
-  - `item = await store.ensure(key, default_item)`
-- Initialize the store with the `primary_key` option
-  - `Store.create("my_store", schema=MyModel, primary_key="name")`
-  - When inserting items, the store will read `item[primary_key]` and use that as the key
+- `store.add(item)`
+- `store.put(item)`
+- `store.ensure(default_item)`
 
 ### Migrate schemas
 
@@ -113,58 +158,20 @@ The store will **migrate all existing documents when the store is initialized**.
 
 ```py
 from junk_drawer import Store
+from pydantic import BaseModel
+
+class MyModel(BaseModel):
+    name: str
 
 async def main():
-    store = await Store.create("/path/to/directory")
+    store = await Store.create("path/to/store", schema=MyModel)
 ```
 
-Creates a `Store` instance to store items in a given directory. Do not configure multiple stores for the same directory at the same time.
+Creates a `Store` instance to store items in a given directory relative to the current working directory. Do not configure multiple stores for the same directory.
 
 Unless otherwise noted, all methods of a `Store` are `async` and should be `await`ed.
 
-### store.add(item: Schema, key: Optional[str] = None) -> Optional[str]
-
-| argument | type     | required | description                      |
-| -------- | -------- | -------- | -------------------------------- |
-| `item`   | `Schema` | Yes      | Item to serialize and store      |
-| `key`    | `str`    | No       | Key - generated UUIDv4 if `None` |
-
-```py
-from junk_drawer import Store, Schema
-
-class Scissors(Schema):
-  left_handed: bool
-
-async def main():
-    store = await Store.create("scissors", schema=Scissors)
-    scissors = Scissors(left_handed=true)
-    scissors_key = await store.add(scissors)
-```
-
-Adds an item into the store, serializing `item` to JSON and placing it in `${store_name}/${key}.json`. If an item at `key` already exists, `add` will not insert `item` and will return `None`.
-
-### store.put(item: Schema, key: Optional[str] = None) -> str
-
-| argument | type     | required | description                      |
-| -------- | -------- | -------- | -------------------------------- |
-| `item`   | `Schema` | Yes      | Item to serialize and store      |
-| `key`    | `str`    | No       | Key - generated UUIDv4 if `None` |
-
-```py
-from junk_drawer import Store
-
-class Scissors(Schema):
-  left_handed: bool
-
-async def main():
-    store = await Store.create("scissors", schema=Scissors)
-    scissors = Scissors(left_handed=true)
-    scissors_key = await store.put(scissors, "my_scissors")
-```
-
-Adds an item into the store, serializing `item` to JSON and placing it in `${store_name}/${key}.json`. Will replace the item with `key` if it already exists.
-
-### store.get(key: str) -> Optional[Schema]
+### store.get(key: str) -> Optional[BaseModel]
 
 | argument | type  | required | description     |
 | -------- | ----- | -------- | --------------- |
@@ -172,44 +179,47 @@ Adds an item into the store, serializing `item` to JSON and placing it in `${sto
 
 ```py
 from junk_drawer import Store
+from pydantic import BaseModel
 
-class Scissors(Schema):
+class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
     store = await Store.create("scissors", schema=Scissors)
-    scissors = await store.get("my_scissors")
+    scissors = await store.get("my-scissors")
 ```
 
 Get an item by key from the store. Returns `None` if no item with that key exists.
 
-### store.ensure(key: str, default_item: Schema) -> Schema
+### store.ensure(default_item: BaseModel, key: Optional[str] = None) -> BaseModel
 
-| argument       | type     | required | description                      |
-| -------------- | -------- | -------- | -------------------------------- |
-| `key`          | `str`    | No       | Key to retrieve                  |
-| `default_item` | `Schema` | Yes      | Item to insert if key is missing |
+| argument       | type        | required | description                                    |
+| -------------- | ----------- | -------- | ---------------------------------------------- |
+| `default_item` | `BaseModel` | Yes      | Item to insert if key is missing               |
+| `key`          | `str`       | No       | Key, optional if using `primary_key` from item |
 
 ```py
 from junk_drawer import Store
+from pydantic import BaseModel
 
-class Scissors(Schema):
-  left_handed: bool
+class AppConfig(BaseModel):
+  opted_in: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
-    default_scissors = Scissors(left_handed=true)
-    scissors = await store.ensure("my_scissors", default_scissors)
+    default_config = AppConfig(opted_in=false)
+    store = await Store.create("config", schema=AppConfig)
+    config = await store.ensure(default_config, "index")
 ```
 
-Get an item by key from the store. If no item with that key exists, adds `default_item` to the store with `key`.
+Get an item by key from the store. If no item with that key exists, adds `default_item` to the store before returning the item. Effectively a shortcut for a `get` followed by an `add` if the `get` returns `None`.
 
-### store.get_all_items() -> List[Schema]
+### store.get_all_items() -> List[BaseModel]
 
 ```py
 from junk_drawer import Store
+from pydantic import BaseModel
 
-class Scissors(Schema):
+class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
@@ -217,14 +227,15 @@ async def main():
     all_scissors = await store.get_all_items()
 ```
 
-Returns a list of all items in the store. Returns keys in the same order as `get_all_keys`.
+Returns a list of all items in the store. If items are not using a `primary_key`, use `get_all_entries` to get items and their associated keys.
 
 ### store.get_all_keys() -> List[str]
 
 ```py
 from junk_drawer import Store
+from pydantic import BaseModel
 
-class Scissors(Schema):
+class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
@@ -232,22 +243,67 @@ async def main():
     all_scissor_keys = await store.get_all_keys()
 ```
 
-Returns a list of all keys in the store. Returns keys in the same order as `get_all_items`.
+Returns a list of all keys in the store. May return more keys than actual valid documents if there are invalid JSON files in the store directory.
 
-### store.count() -> int
+### store.get_all_entries() -> List[Tuple[str, BaseModel]]
 
 ```py
 from junk_drawer import Store
+from pydantic import BaseModel
 
-class Scissors(Schema):
+class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
     store = await Store.create("scissors", schema=Scissors)
-    n_scissors = await store.count()
+    all_scissor_entries = await store.get_all_entries()
 ```
 
-Returns the number of items in the store.
+Returns a zipped list of all key/item pairs in the store. Useful if you're not using `primary_key` but you still need to get all items and their associated keys.
+
+### store.add(item: BaseModel, key: Optional[str] = None) -> Optional[str]
+
+| argument | type        | required | description                                    |
+| -------- | ----------- | -------- | ---------------------------------------------- |
+| `item`   | `BaseModel` | Yes      | Item to serialize and store                    |
+| `key`    | `str`       | No       | Key, optional if using `primary_key` from item |
+
+```py
+from junk_drawer import Store
+from pydantic import BaseModel
+
+class Scissors(BaseModel):
+  left_handed: bool
+
+async def main():
+    store = await Store.create("scissors", schema=Scissors)
+    scissors = Scissors(left_handed=true)
+    scissors_key = await store.add(scissors, "my-scissors")
+```
+
+Adds an item into the store, serializing `item` to JSON and placing it in `${store_name}/${key}.json`. If an item at `key` already exists, `add` will not insert `item` and will return `None`.
+
+### store.put(item: BaseModel, key: Optional[str] = None) -> str
+
+| argument | type        | required | description                                    |
+| -------- | ----------- | -------- | ---------------------------------------------- |
+| `item`   | `BaseModel` | Yes      | Item to serialize and store                    |
+| `key`    | `str`       | No       | Key, optional if using `primary_key` from item |
+
+```py
+from junk_drawer import Store
+from pydantic import BaseModel
+
+class Scissors(BaseModel):
+  left_handed: bool
+
+async def main():
+    store = await Store.create("scissors", schema=Scissors)
+    scissors = Scissors(left_handed=true)
+    scissors_key = await store.put(scissors, "my-scissors")
+```
+
+Adds an item into the store, serializing `item` to JSON and placing it in `${store_name}/${key}.json`. Will replace the item with `key` if it already exists.
 
 ### store.delete(key: str) -> Optional[str]
 
@@ -257,13 +313,14 @@ Returns the number of items in the store.
 
 ```py
 from junk_drawer import Store
+from pydantic import BaseModel
 
-class Scissors(Schema):
+class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
     store = await Store.create("scissors", schema=Scissors)
-    scissors_key = await store.put(Scissors(left_handed=true))
+    scissors_key = await store.put(Scissors(left_handed=true), "key")
     await store.delete(scissors_key)
 ```
 
