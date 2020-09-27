@@ -2,7 +2,7 @@
 
 > Simple JSON data storage on the filesystem
 
-`junk_drawer` is a Python module to place JSON-serializable objects in a key-value store, backed by JSON-on-the-filesystem in a simple directory structure.
+`junk_drawer` is a Python module to place JSON-serializable objects in a key-value store, backed by JSON-on-the-filesystem in a simple directory structure. The library allows you to create a store that will accept items of the same shape, similarly to a database table.
 
 **Work in progress - Not yet available**
 
@@ -14,7 +14,7 @@ pip install junk-drawer
 
 ## Usage
 
-### Create a store with a schema
+### Create a store
 
 ```py
 from junk_drawer import Store
@@ -27,7 +27,7 @@ async def main():
     store = await Store.create("path/to/store", schema=MyModel)
 ```
 
-Use [Pydantic][] to define your models. When this store is initialized, it will create the directory `${cwd}/path/to/store` if it doesn't already exist.
+A store can be used to save and retrieve multiple items conforming to the same schema. Use [Pydantic][] to define your model shape. When this store is initialized, it will create the directory `${cwd}/path/to/store` if it doesn't already exist.
 
 [pydantic]: https://pydantic-docs.helpmanual.io/
 
@@ -104,12 +104,6 @@ async def main():
     removed_key = await store.delete("some-key")
 ```
 
-If you specify the `primary_key` option when creating the store, store modification operations will use the value of `primary_key` from the item to determine the key. The value of `primary_key` will be converted to a `str` before use and **should not begin with a dot**.
-
-- `store.add(item)`
-- `store.put(item)`
-- `store.ensure(default_item)`
-
 ### Migrate schemas
 
 ```py
@@ -143,7 +137,9 @@ If you need to change the schema of items in an already existing store, you need
 
 The store can be initialized with a list of migration functions, where each function represents one version of the schema. The migration functions will be called as a waterfall, and the last function in the chain **must output a dict in the correct format**. Pydantic will raise an error if the dict cannot be used to successfully initialize a model instance.
 
-The store will **migrate all existing documents when the store is initialized**.
+Once a `Store` has a migration function in its migrations list, that function **can never be removed**. When adding a migration function, you should write unit tests to ensure the correct fields are added / modified in the dict.
+
+**Migrations will happen lazily** whenever a given item is accessed. If an item exists on the disk at a previous schema version and is never accessed, it will not be migrated.
 
 ## Reference
 
@@ -202,16 +198,16 @@ Get an item by key from the store. Returns `None` if no item with that key exist
 from junk_drawer import Store
 from pydantic import BaseModel
 
-class AppConfig(BaseModel):
-  opted_in: bool
+class Scissors(BaseModel):
+  left_handed: bool
 
 async def main():
-    default_config = AppConfig(opted_in=false)
-    store = await Store.create("config", schema=AppConfig)
-    config = await store.ensure(default_config, "index")
+    default_scissors = Scissors(left_handed=true)
+    store = await Store.create("scissors", schema=Scissors)
+    scissors = await store.ensure(default_scissors, "my-scissors")
 ```
 
-Get an item by key from the store. If no item with that key exists, adds `default_item` to the store before returning the item. Effectively a shortcut for a `get` followed by an `add` if the `get` returns `None`.
+Get an item by key from the store. If no item with that key exists, adds `default_item` to the store before returning the item. Effectively a shortcut for a `get` followed by an `add` if the `get` returns `None`. Complementary to `store.put`.
 
 ### store.get_all_items() -> List[BaseModel]
 
@@ -324,11 +320,27 @@ async def main():
     await store.delete(scissors_key)
 ```
 
-Removes the document with key `key` from the store. Returns the ID of the document it removed, if any.
+Removes the document with key `key` from the store. Returns the key of the item it removed or `None` if no item at that key was found.
+
+### store.delete_store() -> None
+
+```py
+from junk_drawer import Store
+from pydantic import BaseModel
+
+class Scissors(BaseModel):
+  left_handed: bool
+
+async def main():
+    store = await Store.create("scissors", schema=Scissors)
+    await store.delete_store()
+```
+
+Deletes the backing directory and all files for the store.
 
 ### Migration
 
-A `Migration` is a function that takes a `Dict[str, Any]` and returns a `Dict[str, Any]`
+A `Migration` is a function that takes a `Dict[str, Any]` and returns a `Dict[str, Any]`. See [Migrate schemas](#migrate-schemas) section for usage details.
 
 ```py
 Migration = Callable[[Dict[str, Any]], Dict[str, Any]]
