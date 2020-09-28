@@ -33,6 +33,6 @@ jobs:
       - name: Format checks
         run: poetry run black --check .
       - name: Lint checks
-        run: poetry run pylama
+        run: poetry run flake8
       - name: Type checks
         run: poetry run mypy

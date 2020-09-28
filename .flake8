@@ -1,0 +1,10 @@
+[flake8]
+
+# configure for black support
+# https://github.com/psf/black/blob/master/docs/compatible_configs.md
+max-line-length = 88
+extend-ignore = E203
+
+# configure flake8-docstrings
+# https://pypi.org/project/flake8-docstrings/
+docstring-convention = pep257
