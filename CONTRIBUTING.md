@@ -33,7 +33,7 @@ poetry run ptw
 poetry run black .
 
 # run lints
-poetry run pylama
+poetry run flake8
 
 # run type checks
 poetry run mypy
