@@ -2,7 +2,8 @@
 import pytest
 from pathlib import PurePath
 from pydantic import BaseModel
-from junk_drawer import Store, InvalidItemDataError
+from junk_drawer import Store
+from junk_drawer.errors import InvalidItemDataError
 from junk_drawer.filesystem import AsyncFilesystemLike
 
 # TODO(mc, 2020-09-28): mypy doesn't know about mock.AsyncMock
