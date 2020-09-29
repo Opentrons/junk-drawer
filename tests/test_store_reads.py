@@ -1,5 +1,5 @@
 """Store tests for junk_drawer."""
-import pytest  # type: ignore[import]
+import pytest
 from pathlib import PurePath
 from pydantic import BaseModel
 from junk_drawer import Store, InvalidItemDataError
