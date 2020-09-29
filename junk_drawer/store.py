@@ -41,7 +41,7 @@ class Store(Generic[S, M]):
         filesystem: AsyncFilesystemLike,
         raise_on_validation_error: bool,
     ) -> None:
-        """Internal Store constructor; use Store.create instead."""
+        """Initialize a Store; use Store.create instead."""
         self._schema = schema
         self._directory = directory
         self._fs = filesystem

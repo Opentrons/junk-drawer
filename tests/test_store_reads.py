@@ -1,5 +1,5 @@
 """Store tests for junk_drawer."""
-import pytest
+import pytest  # type: ignore[import]
 from pathlib import PurePath
 from pydantic import BaseModel
 from junk_drawer import Store, InvalidItemDataError
@@ -21,13 +21,13 @@ class ExampleModel(BaseModel):
 
 @pytest.fixture
 def fs_adapter():
-    """Mock for junk_drawer.filesystem.async_fs."""
+    """Mock an asynchronous filesystem."""
     return AsyncMock(spec=AsyncFilesystemLike)
 
 
 @pytest.fixture
 async def store(fs_adapter):
-    """Creates a fresh Store for every test."""
+    """Create a fresh Store for every test."""
     store = await Store.create(
         "./store",
         schema=ExampleModel,

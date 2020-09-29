@@ -20,9 +20,9 @@ class AsyncFilesystemLike(ABC):
         ...
 
     async def read_json(self, path: PurePath) -> dict:
-        """Reads and parses a single JSON file."""
+        """Read and parse a single JSON file."""
         ...
 
     async def read_json_dir(self, path: PurePath) -> List[Tuple[str, dict]]:
-        """Reads and parses all JSON files in a directory concurrently."""
+        """Read and parse all JSON files in a directory concurrently."""
         ...
