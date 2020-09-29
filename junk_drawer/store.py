@@ -1,4 +1,5 @@
 """Store module for junk_drawer."""
+from __future__ import annotations
 from logging import getLogger
 from pathlib import PurePath
 from pydantic import BaseModel, ValidationError
@@ -6,23 +7,22 @@ from typing import Generic, List, Optional, Tuple, TypeVar, Type
 from .filesystem import AsyncFilesystemLike
 from .errors import InvalidItemDataError
 
-S = TypeVar("S", bound="Store")
 M = TypeVar("M", bound=BaseModel)
 
 log = getLogger(__name__)
 
 
-class Store(Generic[S, M]):
+class Store(Generic[M]):
     """A Store class is used to create and manage a collection of items."""
 
     @classmethod
     async def create(
-        cls: Type[S],
+        cls: Type[Store[M]],
         name: str,
         schema: Type[M],
         filesystem: AsyncFilesystemLike,
         raise_on_validation_error: bool = True,
-    ) -> S:
+    ) -> Store[M]:
         """Create a Store, waiting for the directory to be set up if necessary."""
         directory = PurePath(name)
         await filesystem.ensure_dir(directory)
