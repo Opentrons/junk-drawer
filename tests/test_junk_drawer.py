@@ -1,12 +1,41 @@
-"""Entrypoint tests for junk_drawer."""
-from junk_drawer import __version__, Store
+"""Entrypoint and e2e tests for junk_drawer."""
+import pytest
+from pydantic import BaseModel
+from junk_drawer import Store
 
 
-def test_version():
-    """The version string should be available."""
-    assert __version__ == "0.1.0"
+pytestmark = pytest.mark.asyncio
 
 
-def test_store():
-    """The Store class should be available."""
-    assert Store
+class CoolModel(BaseModel):
+    """A model to test with."""
+
+    foo: str
+    bar: str
+
+
+async def test_store_write_and_read(tmp_path):
+    """A store should be able to write and read a file."""
+    store = await Store.create(tmp_path, schema=CoolModel)
+
+    # TODO(mc, 2020-10-03): replace with store.add
+    (tmp_path / "foo.json").write_text(CoolModel(foo="hello", bar="world").json())
+    result = await store.get("foo")
+
+    assert result == CoolModel(foo="hello", bar="world")
+
+
+async def test_store_write_and_read_dir(tmp_path):
+    """A store should be able to write and read the whole store."""
+    store = await Store.create(tmp_path, schema=CoolModel)
+
+    # TODO(mc, 2020-10-03): replace with store.add
+    (tmp_path / "foo.json").write_text(CoolModel(foo="hello", bar="world").json())
+    (tmp_path / "bar.json").write_text(CoolModel(foo="oh", bar="hai").json())
+
+    result = await store.get_all_entries()
+
+    assert result == [
+        ("foo", CoolModel(foo="hello", bar="world")),
+        ("bar", CoolModel(foo="oh", bar="hai")),
+    ]

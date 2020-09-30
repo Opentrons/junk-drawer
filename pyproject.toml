@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "junk-drawer"
-version = "0.1.0"
+version = '0.1.0'
 description = "Simple JSON data storage on the filesystem"
 authors = ["Opentrons Labworks <engineering@opentrons.com>"]
 
