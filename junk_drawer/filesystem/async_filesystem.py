@@ -68,22 +68,20 @@ class AsyncFilesystem(AsyncFilesystemLike):
 
             try:
                 text = file_path.read_text()
-            except FileNotFoundError as not_found_error:
-                raise PathNotFoundError() from not_found_error
-            except Exception as read_error:
-                # NOTE(mc, 2020-10-03): this condition is not covered by tests
-                msg = "Unexpected error reading {file_path}"
-                log.debug(msg, exc_info=read_error)
-                raise FileReadError(msg) from read_error
+            except FileNotFoundError as error:
+                raise PathNotFoundError(str(error)) from error
+            except Exception as error:
+                # NOTE: this except branch is not covered by tests, but is important
+                log.debug(f"Unexpected error reading {file_path}", exc_info=error)
+                raise FileReadError(str(error)) from error
 
             try:
                 result = parse_json(text)
-            except Exception as parse_error:
+            except Exception as error:
                 # this should only happen if the file being read has been modified
                 # outside of this library or a defective custom JSON encoder was used
-                msg = f"Unexpected error parsing {file_path}"
-                log.debug(msg, exc_info=parse_error)
-                raise FileParseError(msg) from parse_error
+                log.debug(f"Unexpected error parsing {file_path}", exc_info=error)
+                raise FileParseError(str(error)) from error
 
             return result
 

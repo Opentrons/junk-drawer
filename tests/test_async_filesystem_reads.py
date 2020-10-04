@@ -118,7 +118,7 @@ async def test_read_json_raises_path_does_not_exist_error(tmp_path, filesystem):
     """It should return a FileNotFoundError if file doesn't exist."""
     path = PurePath(tmp_path / "foo")
 
-    with pytest.raises(PathNotFoundError):
+    with pytest.raises(PathNotFoundError, match="No such file or directory"):
         await filesystem.read_json(path)
 
 
@@ -128,7 +128,7 @@ async def test_read_json_raises_parse_error(tmp_path, filesystem):
 
     path = PurePath(tmp_path / "foo")
 
-    with pytest.raises(FileParseError):
+    with pytest.raises(FileParseError, match="Expecting property name"):
         await filesystem.read_json(path)
 
 
