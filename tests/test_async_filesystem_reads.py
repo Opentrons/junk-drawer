@@ -17,22 +17,6 @@ def filesystem():
     return AsyncFilesystem()
 
 
-class InstanceOf:
-    """Matcher class that will consider two items equal if they have the same type."""
-
-    def __init__(self, expected_type):
-        """Initialize the matcher with the expected type."""
-        self._expected_type = expected_type
-
-    def __eq__(self, other):
-        """Check the type of other."""
-        return type(other) == self._expected_type
-
-    def __repr__(self):
-        """Easy to read representation of the matcher."""
-        return f"<instance of {self._expected_type}>"
-
-
 async def test_ensure_dir_noops_when_dir_exists(tmp_path, filesystem):
     """It should do nothing with ensure_dir if the directory already exists."""
     tmp_path.mkdir(exist_ok=True)
