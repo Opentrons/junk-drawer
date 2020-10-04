@@ -35,7 +35,6 @@ async def test_store_write_and_read_dir(tmp_path):
 
     result = await store.get_all_entries()
 
-    assert result == [
-        ("foo", CoolModel(foo="hello", bar="world")),
-        ("bar", CoolModel(foo="oh", bar="hai")),
-    ]
+    assert len(result) == 2
+    assert ("foo", CoolModel(foo="hello", bar="world")) in result
+    assert ("bar", CoolModel(foo="oh", bar="hai")) in result

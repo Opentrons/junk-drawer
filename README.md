@@ -224,7 +224,7 @@ async def main():
     all_scissors = await store.get_all_items()
 ```
 
-Returns a list of all items in the store. If items are not using a `primary_key`, use `get_all_entries` to get items and their associated keys.
+Returns a list of all items in the store. If items are not using a `primary_key`, use `get_all_entries` to get items and their associated keys. The order of the items is arbitrary (it depends on [`os.listdir`](https://docs.python.org/3/library/os.html#os.listdir)).
 
 ### store.get_all_keys() -> List[str]
 
@@ -240,7 +240,7 @@ async def main():
     all_scissor_keys = await store.get_all_keys()
 ```
 
-Returns a list of all keys in the store. May return more keys than actual valid documents if there are invalid JSON files in the store directory.
+Returns a list of all keys in the store. May return more keys than actual valid documents if there are invalid JSON files in the store directory. The order of the keys is arbitrary (it depends on [`os.listdir`](https://docs.python.org/3/library/os.html#os.listdir)).
 
 ### store.get_all_entries() -> List[Tuple[str, BaseModel]]
 
@@ -256,7 +256,7 @@ async def main():
     all_scissor_entries = await store.get_all_entries()
 ```
 
-Returns a zipped list of all key/item pairs in the store. Useful if you're not using `primary_key` but you still need to get all items and their associated keys.
+Returns a zipped list of all key/item pairs in the store. Useful if you're not using `primary_key` but you still need to get all items and their associated keys. The order of the entries is arbitrary (it depends on [`os.listdir`](https://docs.python.org/3/library/os.html#os.listdir)).
 
 ### store.add(item: BaseModel, key: Optional[str] = None) -> Optional[str]
 
