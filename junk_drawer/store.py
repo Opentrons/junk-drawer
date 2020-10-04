@@ -4,6 +4,7 @@ from logging import getLogger
 from pathlib import PurePath
 from pydantic import BaseModel
 from typing import Generic, List, Optional, Tuple, TypeVar, Type, Union
+from .errors import InvalidItemDataError, ItemAccessError
 from .filesystem import (
     AsyncFilesystemLike,
     AsyncFilesystem,
@@ -12,24 +13,24 @@ from .filesystem import (
     FileParseError,
     FileError,
 )
-from .errors import InvalidItemDataError, ItemAccessError
 
-M = TypeVar("M", bound=BaseModel)
+
+ModelT = TypeVar("ModelT", bound=BaseModel)
 
 log = getLogger(__name__)
 
 
-class Store(Generic[M]):
+class Store(Generic[ModelT]):
     """A Store class is used to create and manage a collection of items."""
 
     @classmethod
     async def create(
-        cls: Type[Store[M]],
+        cls: Type[Store[ModelT]],
         directory: Union[str, PurePath],
-        schema: Type[M],
-        filesystem: Optional[AsyncFilesystemLike] = None,
+        schema: Type[ModelT],
         ignore_errors: bool = False,
-    ) -> Store[M]:
+        filesystem: Optional[AsyncFilesystemLike] = None,
+    ) -> Store[ModelT]:
         """Create a Store, waiting for the directory to be set up if necessary."""
         directory = PurePath(directory)
         filesystem = filesystem if filesystem is not None else AsyncFilesystem()
@@ -46,7 +47,7 @@ class Store(Generic[M]):
     def __init__(
         self,
         directory: PurePath,
-        schema: Type[M],
+        schema: Type[ModelT],
         filesystem: AsyncFilesystemLike,
         ignore_errors: bool,
     ) -> None:
@@ -61,7 +62,7 @@ class Store(Generic[M]):
         key_path = self._directory / key
         return await self._filesystem.file_exists(key_path)
 
-    async def get(self, key: str) -> Optional[M]:
+    async def get(self, key: str) -> Optional[ModelT]:
         """Get an item from the store by key, if that key exists."""
         key_path = self._directory / key
         read_result = None
@@ -79,7 +80,7 @@ class Store(Generic[M]):
         basenames = await self._filesystem.read_dir(self._directory)
         return basenames
 
-    async def get_all_entries(self) -> List[Tuple[str, M]]:
+    async def get_all_entries(self) -> List[Tuple[str, ModelT]]:
         """Get all keys in the store."""
         try:
             dir_entries = await self._filesystem.read_json_dir(
@@ -92,7 +93,7 @@ class Store(Generic[M]):
 
         return [(entry.path.stem, entry.contents) for entry in dir_entries]
 
-    async def get_all_items(self) -> List[M]:
+    async def get_all_items(self) -> List[ModelT]:
         """Get all keys in the store."""
         entries = await self.get_all_entries()
         return [item for key, item in entries]

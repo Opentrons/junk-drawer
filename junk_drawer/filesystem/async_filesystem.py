@@ -1,9 +1,10 @@
 """Async threadpool-based JSON filesystem."""
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from logging import getLogger
 from pathlib import Path, PurePath
-from typing import List
+from typing import List, Optional
 
 from .errors import PathNotFoundError, FileReadError, FileParseError
 from .base import (
@@ -26,22 +27,23 @@ class AsyncFilesystem(AsyncFilesystemLike):
     asyncio event loop's default ThreadPoolExecutor.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, executor: Optional[ThreadPoolExecutor] = None) -> None:
         """Initialize an AsyncFilesystem adapter."""
         self._loop = asyncio.get_event_loop()
+        self._executor = executor
 
     async def ensure_dir(self, path: PurePath) -> PurePath:
         """Ensure a directory at `path` exists, creating it if it doesn't."""
         real_path = Path(path)
         task = partial(real_path.mkdir, parents=True, exist_ok=True)
-        await self._loop.run_in_executor(None, task)
+        await self._loop.run_in_executor(self._executor, task)
         return path
 
     async def read_dir(self, path: PurePath) -> List[str]:
         """Get the stem names of all JSON files in the directory."""
         real_path = Path(path)
         task = real_path.iterdir
-        children = await self._loop.run_in_executor(None, task)
+        children = await self._loop.run_in_executor(self._executor, task)
         return [
             child.stem
             for child in children
@@ -52,7 +54,7 @@ class AsyncFilesystem(AsyncFilesystemLike):
         """Return True if `{path}.json` is a file."""
         real_path = Path(path.with_suffix(".json"))
         task = real_path.is_file
-        exists = await self._loop.run_in_executor(None, task)
+        exists = await self._loop.run_in_executor(self._executor, task)
 
         return exists
 
@@ -85,7 +87,7 @@ class AsyncFilesystem(AsyncFilesystemLike):
 
             return result
 
-        return await self._loop.run_in_executor(None, _read_and_parse)
+        return await self._loop.run_in_executor(self._executor, _read_and_parse)
 
     async def read_json_dir(
         self,
