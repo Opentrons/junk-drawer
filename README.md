@@ -140,7 +140,7 @@ Once a `Store` has a migration function in its migrations list, that function **
 
 ## Reference
 
-### Store.create(name, schema, primary_key = None, ignore_errors = False, migrations=()) -> Store
+### Store.create(directory, schema, primary_key = None, ignore_errors = False, migrations=()) -> Store
 
 | argument        | type              | required | description                                                     |
 | --------------- | ----------------- | -------- | --------------------------------------------------------------- |
