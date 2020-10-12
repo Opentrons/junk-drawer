@@ -37,6 +37,9 @@ poetry run flake8
 
 # run type checks
 poetry run mypy
+
+# run everything
+poetry run black . && poetry run flake8 && poetry run mypy && poetry run pytest
 ```
 
 ## Build and Publish Tasks
