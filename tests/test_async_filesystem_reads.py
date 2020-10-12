@@ -2,19 +2,12 @@
 import pytest
 from pathlib import Path, PurePath
 from junk_drawer.filesystem import (
-    AsyncFilesystem,
     DirectoryEntry as Entry,
     PathNotFoundError,
     FileParseError,
 )
 
 pytestmark = pytest.mark.asyncio
-
-
-@pytest.fixture
-def filesystem():
-    """Create a fresh filesystem adapter for every test."""
-    return AsyncFilesystem()
 
 
 async def test_ensure_dir_noops_when_dir_exists(tmp_path, filesystem):
@@ -140,3 +133,48 @@ async def test_read_json_dir_can_ignore_errors(tmp_path, filesystem):
     files = await filesystem.read_json_dir(path, ignore_errors=True)
 
     assert files == [Entry(path=path / "foo", contents={"foo": "hello", "bar": 0})]
+
+
+async def test_read_json_with_custom_parser(tmp_path, mock_parse_json, filesystem):
+    """It should read a file and parse into JSON using custom parser."""
+    Path(tmp_path / "foo.json").write_text("""{ "this": "is crazy" }""")
+
+    mock_parse_json.return_value = {"call me": "maybe"}
+    path = PurePath(tmp_path / "foo")
+    result = await filesystem.read_json(path, parse_json=mock_parse_json)
+
+    assert result == {"call me": "maybe"}
+    mock_parse_json.assert_called_with("""{ "this": "is crazy" }""")
+
+
+async def test_read_json_when_custom_parser_raises(
+    tmp_path, mock_parse_json, filesystem
+):
+    """It should raise a FileParseError if the custom parser raises."""
+    Path(tmp_path / "foo.json").write_text("""{ "foo": "hello", "bar": 42 }""")
+
+    error = Exception("oh no")
+    mock_parse_json.side_effect = error
+    path = PurePath(tmp_path / "foo")
+
+    with pytest.raises(FileParseError):
+        await filesystem.read_json(path, parse_json=mock_parse_json)
+
+
+async def test_read_json_dir_with_custom_parser(tmp_path, mock_parse_json, filesystem):
+    """It should read a all files in a directory."""
+    Path(tmp_path / "foo.json").write_text("""{ "foo": "hello", "bar": 0 }""")
+    Path(tmp_path / "bar.json").write_text("""{ "foo": "from the", "bar": 1 }""")
+    Path(tmp_path / "baz.json").write_text("""{ "foo": "other side", "bar": 2 }""")
+
+    mock_parse_json.return_value = {"call me": "maybe"}
+    path = PurePath(tmp_path)
+    files = await filesystem.read_json_dir(path, parse_json=mock_parse_json)
+
+    assert len(files) == 3
+    assert Entry(path=path / "foo", contents={"call me": "maybe"}) in files
+    assert Entry(path=path / "bar", contents={"call me": "maybe"}) in files
+    assert Entry(path=path / "baz", contents={"call me": "maybe"}) in files
+    mock_parse_json.assert_any_call("""{ "foo": "hello", "bar": 0 }""")
+    mock_parse_json.assert_any_call("""{ "foo": "from the", "bar": 1 }""")
+    mock_parse_json.assert_any_call("""{ "foo": "other side", "bar": 2 }""")
