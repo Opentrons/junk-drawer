@@ -127,20 +127,14 @@ async def test_store_get_raises_read_error(store, mock_filesystem):
         await store.get_all_items()
 
 
-async def test_validation_error_may_be_silenced(mock_filesystem):
+async def test_validation_error_may_be_silenced(ignore_errors_store, mock_filesystem):
     """It should return None in case of a validation error if set to not raise."""
-    store = await Store.create(
-        "./store",
-        schema=CoolModel,
-        filesystem=mock_filesystem,
-        ignore_errors=True,
-    )
     mock_filesystem.read_json.side_effect = FileParseError("oh no")
     mock_filesystem.read_json_dir.return_value = [
         DirEntry(path=store_path / "foo", contents=CoolModel(foo="hello", bar=0)),
     ]
-    item = await store.get("foo")
-    all_items = await store.get_all_items()
+    item = await ignore_errors_store.get("foo")
+    all_items = await ignore_errors_store.get_all_items()
 
     assert item is None
     assert all_items == [CoolModel(foo="hello", bar=0)]

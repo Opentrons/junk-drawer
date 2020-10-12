@@ -53,3 +53,15 @@ async def keyed_store(mock_filesystem) -> Store:
         filesystem=mock_filesystem,
     )
     return store
+
+
+@pytest.fixture
+async def ignore_errors_store(mock_filesystem) -> Store:
+    """Create a Store with errors ignored."""
+    store = await Store.create(
+        STORE_PATH_STR,
+        schema=CoolModel,
+        ignore_errors=True,
+        filesystem=mock_filesystem,
+    )
+    return store

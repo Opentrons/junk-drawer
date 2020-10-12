@@ -123,6 +123,22 @@ async def test_store_put_bad_primary_key_asserts(mock_filesystem):
         await store.put(item)
 
 
+async def test_store_put_returns_none_if_ignoring_errors(
+    ignore_errors_store, mock_filesystem
+):
+    """store.put should return None if item cannot be encoded / written."""
+    key = "cool-key"
+    mock_filesystem.write_json.side_effect = FileWriteError("oh no")
+    result = await ignore_errors_store.put(CoolModel(foo="hello", bar=0), key)
+
+    assert result is None
+
+    mock_filesystem.write_json.side_effect = FileEncodeError("oh no")
+    result = await ignore_errors_store.put(CoolModel(foo="hello", bar=0), key)
+
+    assert result is None
+
+
 async def test_store_ensure(store, mock_filesystem):
     """store.ensure should return item if it exists already."""
     default_item = CoolModel(foo="foo", bar=0)

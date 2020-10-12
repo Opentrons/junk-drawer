@@ -114,6 +114,7 @@ class Store(Generic[ModelT]):
         """
         item_key = self._get_item_key(item, key)
         key_path = self._directory / item_key
+        put_key = None
 
         try:
             await self._filesystem.write_json(
@@ -154,21 +155,22 @@ class Store(Generic[ModelT]):
         None if the item is unable to be removed.
         """
         key_path = self._directory / key
-        added_key = None
+        removed_key = None
+
         try:
             await self._filesystem.remove(key_path)
-            added_key = key
+            removed_key = key
         except (PathNotFoundError, RemoveFileError) as error:
             self._maybe_raise_file_error(error)
 
-        return added_key
+        return removed_key
 
     async def delete_store(self) -> None:
         """Delete the store and all its items."""
         return await self._filesystem.remove_dir(self._directory)
 
     def encode_json(self, item: ModelT) -> str:
-        """Encode a dict into JSON using Pydantic to support extra data types."""
+        """Encode a dict into JSON using Pydantic."""
         return item.json()
 
     def _get_item_key(self, item: ModelT, key: Optional[str]) -> str:
