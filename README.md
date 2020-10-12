@@ -35,7 +35,6 @@ A store can be used to save and retrieve multiple items conforming to the same s
 
 ```py
 async def main():
-    item = MyModel(name="fizzbuzz")
     store = await Store.create("path/to/store", schema=MyModel)
     item = await store.get("some-key")
 ```
