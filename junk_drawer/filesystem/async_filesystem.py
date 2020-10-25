@@ -4,14 +4,25 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from logging import getLogger
 from pathlib import Path, PurePath
+from shutil import rmtree
 from typing import List, Optional
 
-from .errors import PathNotFoundError, FileReadError, FileParseError
+from .errors import (
+    PathNotFoundError,
+    FileReadError,
+    FileWriteError,
+    FileParseError,
+    FileEncodeError,
+    FileRemoveError,
+)
+
 from .base import (
     default_parse_json,
+    default_encode_json,
     AsyncFilesystemLike,
     ResultT,
     JSONParser,
+    JSONEncoder,
     DirectoryEntry,
 )
 
@@ -36,14 +47,16 @@ class AsyncFilesystem(AsyncFilesystemLike):
         """Ensure a directory at `path` exists, creating it if it doesn't."""
         real_path = Path(path)
         task = partial(real_path.mkdir, parents=True, exist_ok=True)
+
         await self._loop.run_in_executor(self._executor, task)
+
         return path
 
     async def read_dir(self, path: PurePath) -> List[str]:
         """Get the stem names of all JSON files in the directory."""
         real_path = Path(path)
-        task = real_path.iterdir
-        children = await self._loop.run_in_executor(self._executor, task)
+        children = await self._loop.run_in_executor(self._executor, real_path.iterdir)
+
         return [
             child.stem
             for child in children
@@ -110,3 +123,53 @@ class AsyncFilesystem(AsyncFilesystemLike):
             entries = [entry for entry in entries if not isinstance(entry, Exception)]
 
         return entries
+
+    async def write_json(
+        self,
+        path: PurePath,
+        contents: ResultT,
+        encode_json: JSONEncoder[ResultT] = default_encode_json,
+    ) -> None:
+        """Write an object to a JSON file."""
+        file_path = Path(path.with_suffix(".json"))
+
+        def _encode_and_write() -> None:
+            try:
+                encoded_contents = encode_json(contents)
+            except Exception as error:
+                log.debug(f"Unexpected error encoding for {file_path}", exc_info=error)
+                raise FileEncodeError(str(error)) from error
+
+            try:
+                file_path.write_text(encoded_contents)
+            except Exception as error:
+                # NOTE: this except branch is not covered by tests, but is important
+                log.debug(f"Unexpected error writing to {file_path}", exc_info=error)
+                raise FileWriteError(str(error)) from error
+
+        await self._loop.run_in_executor(self._executor, _encode_and_write)
+
+        return None
+
+    async def remove(self, path: PurePath) -> None:
+        """Delete a JSON file."""
+        file_path = Path(path.with_suffix(".json"))
+
+        try:
+            await self._loop.run_in_executor(self._executor, file_path.unlink)
+        except FileNotFoundError as error:
+            raise PathNotFoundError(str(error)) from error
+        except Exception as error:
+            # NOTE: this except branch is not covered by tests, but is important
+            log.debug(f"Unexpected error reading {file_path}", exc_info=error)
+            raise FileRemoveError(str(error)) from error
+
+        return None
+
+    async def remove_dir(self, path: PurePath) -> None:
+        """Delete all files in the given directory and the directory."""
+        task = partial(rmtree, path=path)
+
+        await self._loop.run_in_executor(self._executor, task)
+
+        return None

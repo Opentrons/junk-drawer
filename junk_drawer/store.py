@@ -4,13 +4,17 @@ from logging import getLogger
 from pathlib import PurePath
 from pydantic import BaseModel
 from typing import Generic, List, Optional, Tuple, TypeVar, Type, Union
-from .errors import InvalidItemDataError, ItemAccessError
+from .errors import ItemDecodeError, ItemEncodeError, ItemAccessError
+
 from .filesystem import (
     AsyncFilesystemLike,
     AsyncFilesystem,
     PathNotFoundError,
+    RemoveFileError,
+    FileEncodeError,
     FileReadError,
     FileParseError,
+    FileWriteError,
     FileError,
 )
 
@@ -28,6 +32,7 @@ class Store(Generic[ModelT]):
         cls: Type[Store[ModelT]],
         directory: Union[str, PurePath],
         schema: Type[ModelT],
+        primary_key: Optional[str] = None,
         ignore_errors: bool = False,
         filesystem: Optional[AsyncFilesystemLike] = None,
     ) -> Store[ModelT]:
@@ -40,6 +45,7 @@ class Store(Generic[ModelT]):
         return cls(
             directory=directory,
             schema=schema,
+            primary_key=primary_key,
             filesystem=filesystem,
             ignore_errors=ignore_errors,
         )
@@ -48,12 +54,14 @@ class Store(Generic[ModelT]):
         self,
         directory: PurePath,
         schema: Type[ModelT],
+        primary_key: Optional[str],
         filesystem: AsyncFilesystemLike,
         ignore_errors: bool,
     ) -> None:
         """Initialize a Store; use Store.create instead."""
-        self._schema = schema
         self._directory = directory
+        self._schema = schema
+        self._primary_key = primary_key
         self._filesystem = filesystem
         self._ignore_errors = ignore_errors
 
@@ -71,14 +79,13 @@ class Store(Generic[ModelT]):
                 key_path, parse_json=self._schema.parse_raw
             )
         except (PathNotFoundError, FileParseError, FileReadError) as error:
-            self._maybe_raise_read_error(error)
+            self._maybe_raise_file_error(error)
 
         return read_result
 
     async def get_all_keys(self) -> List[str]:
         """Get all keys in the store."""
-        basenames = await self._filesystem.read_dir(self._directory)
-        return basenames
+        return await self._filesystem.read_dir(self._directory)
 
     async def get_all_entries(self) -> List[Tuple[str, ModelT]]:
         """Get all keys in the store."""
@@ -89,7 +96,7 @@ class Store(Generic[ModelT]):
                 ignore_errors=self._ignore_errors,
             )
         except (PathNotFoundError, FileParseError, FileReadError) as error:
-            self._maybe_raise_read_error(error)
+            self._maybe_raise_file_error(error)
 
         return [(entry.path.stem, entry.contents) for entry in dir_entries]
 
@@ -98,9 +105,90 @@ class Store(Generic[ModelT]):
         entries = await self.get_all_entries()
         return [item for key, item in entries]
 
-    def _maybe_raise_read_error(self, error: FileError) -> None:
+    async def put(self, item: ModelT, key: Optional[str] = None) -> Optional[str]:
+        """
+        Put a single item to the store at key.
+
+        Returns the key of the added item. If `ignore_errors` is set to `True`,
+        `put` will return None if the item was unable to be added.
+        """
+        item_key = self._get_item_key(item, key)
+        key_path = self._directory / item_key
+        put_key = None
+
+        try:
+            await self._filesystem.write_json(
+                key_path, item, encode_json=self.encode_json
+            )
+            put_key = item_key
+        except (FileWriteError, FileEncodeError) as error:
+            self._maybe_raise_file_error(error)
+
+        return put_key
+
+    async def ensure(self, default_item: ModelT, key: Optional[str] = None) -> ModelT:
+        """
+        Ensure an item exists in the store at the given key.
+
+        If an item with `key` already exists, `ensure` will return the item. If
+        no item with `key` exists, it will write `default_item` to the store
+        before returning the item.
+
+        This method is a shortcut for a `get` followed by a `put` if the `get`
+        returns `None`.
+        """
+        item_key = self._get_item_key(default_item, key)
+        result = await self.get(item_key)
+
+        if result is None:
+            await self.put(default_item, key)
+            result = default_item
+
+        return result
+
+    async def delete(self, key: str) -> Optional[str]:
+        """
+        Delete a single item in the store.
+
+        Returns the deleted key if the item was removed or None if no item was
+        found at that key. If `ignore_errors` is set, delete will also return
+        None if the item is unable to be removed.
+        """
+        key_path = self._directory / key
+        removed_key = None
+
+        try:
+            await self._filesystem.remove(key_path)
+            removed_key = key
+        except (PathNotFoundError, RemoveFileError) as error:
+            self._maybe_raise_file_error(error)
+
+        return removed_key
+
+    async def delete_store(self) -> None:
+        """Delete the store and all its items."""
+        return await self._filesystem.remove_dir(self._directory)
+
+    def encode_json(self, item: ModelT) -> str:
+        """Encode a dict into JSON using Pydantic."""
+        return item.json()
+
+    def _get_item_key(self, item: ModelT, key: Optional[str]) -> str:
+        item_key = (
+            getattr(item, self._primary_key, None)
+            if self._primary_key is not None
+            else key
+        )
+
+        assert item_key is not None, "key or a model with a primary_key required"
+
+        return str(item_key)
+
+    def _maybe_raise_file_error(self, error: FileError) -> None:
         if not self._ignore_errors:
             if isinstance(error, FileParseError):
-                raise InvalidItemDataError(str(error))
-            elif isinstance(error, FileReadError):
+                raise ItemDecodeError(str(error))
+            elif isinstance(error, FileEncodeError):
+                raise ItemEncodeError(str(error))
+            elif isinstance(error, (FileReadError, FileWriteError, RemoveFileError)):
                 raise ItemAccessError(str(error))

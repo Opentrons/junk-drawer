@@ -1,7 +1,7 @@
 """junk_drawer error classes."""
 
 
-class InvalidItemDataError(Exception):
+class ItemDecodeError(TypeError):
     """
     Exception thrown when the backing data of an item is invalid.
 
@@ -13,10 +13,19 @@ class InvalidItemDataError(Exception):
     """
 
 
-class ItemAccessError(Exception):
+class ItemEncodeError(TypeError):
+    """
+    Exception thrown when an item was to be encoded into JSON.
+
+    If this exception is raised, the model was unable to be serialized to JSON.
+    This probably means the model uses value(s) that are not JSON serializable.
+    """
+
+
+class ItemAccessError(RuntimeError):
     """
     Exception thrown when an item was unable to be accessed.
 
     If this exception is raised, it means the OS raised some sort of error
-    while trying to open and read the file.
+    while trying to read from, write to, or delete the backing JSON file.
     """
