@@ -8,19 +8,19 @@ from junk_drawer.filesystem import (
     FileWriteError,
     FileEncodeError,
 )
-from .helpers import CoolModel, store_path
+from .helpers import CoolModel
 
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_delete_store(store, mock_filesystem):
+async def test_delete_store(store, store_path, mock_filesystem):
     """store.delete_store should remove the directory."""
     await store.delete_store()
     mock_filesystem.remove_dir.assert_called_with(store_path)
 
 
-async def test_delete_item(store, mock_filesystem):
+async def test_delete_item(store, store_path, mock_filesystem):
     """store.delete should remove a file."""
     key = "delete-me"
     removed = await store.delete(key)
@@ -47,7 +47,7 @@ async def test_delete_item_with_access_error(store, mock_filesystem):
         await store.delete(key)
 
 
-async def test_store_put(store, mock_filesystem):
+async def test_store_put(store, store_path, mock_filesystem):
     """store.put should call filesystem.write_json."""
     key = "cool-key"
     item = CoolModel(foo="hello", bar=0)
@@ -79,7 +79,7 @@ async def test_store_put_raises_encode_error(store, mock_filesystem):
         await store.put(CoolModel(foo="hello", bar=0), key)
 
 
-async def test_store_put_with_primary_key(keyed_store, mock_filesystem):
+async def test_store_put_with_primary_key(keyed_store, store_path, mock_filesystem):
     """store.put should pull primary key from the model if available."""
     item = CoolModel(foo="hello", bar=0)
     put_key = await keyed_store.put(item)
@@ -109,12 +109,14 @@ async def test_store_put_missing_key_asserts(store, mock_filesystem):
         await store.put(item)
 
 
-async def test_store_put_bad_primary_key_asserts(mock_filesystem):
+async def test_store_put_bad_primary_key_asserts(store_path, mock_filesystem):
     """store.put should assert if used with a primary_key that isn't in the model."""
-    store = await Store.create(
-        store_path,
+    store = Store(
+        directory=store_path,
         schema=CoolModel,
         primary_key="not-a-field",
+        migrations=(),
+        ignore_errors=False,
         filesystem=mock_filesystem,
     )
     item = CoolModel(foo="hello", bar=0)
@@ -150,7 +152,7 @@ async def test_store_ensure(store, mock_filesystem):
     assert item == existing_item
 
 
-async def test_store_ensure_writes_default(store, mock_filesystem):
+async def test_store_ensure_writes_default(store, store_path, mock_filesystem):
     """store.ensure should write default item and return it."""
     default_item = CoolModel(foo="foo", bar=0)
     mock_filesystem.read_json.side_effect = PathNotFoundError()

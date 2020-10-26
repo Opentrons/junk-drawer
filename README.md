@@ -142,13 +142,13 @@ Once a `Store` has a migration function in its migrations list, that function **
 
 ### Store.create(directory, schema, primary_key = None, ignore_errors = False, migrations=()) -> Store
 
-| argument        | type              | required | description                                                     |
-| --------------- | ----------------- | -------- | --------------------------------------------------------------- |
-| `directory`     | `str`             | Yes      | Store root directory                                            |
-| `schema`        | `Type[BaseModel]` | Yes      | Document schema                                                 |
-| `primary_key`   | `str`             | No       | Primary key field in `schema`, if applicable                    |
-| `ignore_errors` | `bool`            | No       | Return `None` instead of raising read/parse/write/encode errors |
-| `migrations`    | `List[Migration]` | No       | List of schema migration functions                              |
+| argument        | type                  | required | description                                                     |
+| --------------- | --------------------- | -------- | --------------------------------------------------------------- |
+| `directory`     | `str`                 | Yes      | Store root directory                                            |
+| `schema`        | `Type[BaseModel]`     | Yes      | Document schema                                                 |
+| `primary_key`   | `str`                 | No       | Primary key field in `schema`, if applicable                    |
+| `ignore_errors` | `bool`                | No       | Return `None` instead of raising read/parse/write/encode errors |
+| `migrations`    | `Sequence[Migration]` | No       | Sequence of schema migration functions                          |
 
 ```py
 from junk_drawer import Store
@@ -185,7 +185,7 @@ async def main():
 
 Get an item by key from the store. Returns `None` if no item with that key exists.
 
-### store.get_all_items() -> List[BaseModel]
+### store.get_all_items() -> Sequence[BaseModel]
 
 ```py
 from junk_drawer import Store
@@ -201,7 +201,7 @@ async def main():
 
 Returns a list of all items in the store. If items are not using a `primary_key`, use `get_all_entries` to get items and their associated keys. The order of the items is arbitrary (it depends on [`os.listdir`](https://docs.python.org/3/library/os.html#os.listdir)).
 
-### store.get_all_keys() -> List[str]
+### store.get_all_keys() -> Sequence[str]
 
 ```py
 from junk_drawer import Store
@@ -217,7 +217,7 @@ async def main():
 
 Returns a list of all keys in the store. May return more keys than actual valid documents if there are invalid JSON files in the store directory. The order of the keys is arbitrary (it depends on [`os.listdir`](https://docs.python.org/3/library/os.html#os.listdir)).
 
-### store.get_all_entries() -> List[Tuple[str, BaseModel]]
+### store.get_all_entries() -> Sequence[Tuple[str, BaseModel]]
 
 ```py
 from junk_drawer import Store
@@ -319,5 +319,5 @@ Deletes the backing directory and all files for the store.
 A `Migration` is a function that takes a `Dict[str, Any]` and returns a `Dict[str, Any]`. See [Migrate schemas](#migrate-schemas) section for usage details.
 
 ```py
-Migration = Callable[[Dict[str, Any]], Dict[str, Any]]
+Migration = Callable[[dict], dict]
 ```
