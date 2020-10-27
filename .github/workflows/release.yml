@@ -1,15 +1,15 @@
-name: Create release
+name: Create a new release
 
 on:
   workflow_dispatch:
     inputs:
       bump:
-        description: 'Version string or a bump rule from `poetry version`.'
+        description: 'Version string or a bump rule.'
         required: true
         default: 'minor'
 
 jobs:
-  release:
+  bump:
     name: Bump the package version
     runs-on: ubuntu-latest
     steps:
