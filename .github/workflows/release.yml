@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: '3.7'
       - name: Install dependencies
-        run: pip install poetry && poetry install
+        run: pip install poetry
       - id: bump-version
         name: Bump version
         env:
@@ -30,10 +30,12 @@ jobs:
           echo "::set-output name=version::$(poetry version | sed 's/^junk-drawer //')"
       - name: Tag and push
         env:
+          USER_NAME: ${{ github.actor }}
+          USER_ID: ${{ github.event.sender.id }}
           VERSION: ${{ steps.bump-version.outputs.version }}
         run: |
-          git config user.name "Opentrons Labworks"
-          git config user.email "engineering@opentrons.com"
+          git config user.name "$USER_NAME"
+          git config user.email "$USER_ID+$USER_NAME@users.noreply.github.com"
           git add pyproject.toml
           git commit -m "chore(release): ${VERSION}"
           git tag -a v${VERSION} -m "chore(release): ${VERSION}"
