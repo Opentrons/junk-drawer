@@ -1,0 +1,16 @@
+name: Create a new release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version string or a bump rule from `poetry version`.'
+        required: true
+        default: 'minor'
+
+jobs:
+  bump:
+    name: Bump the package version
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Not implemented" && exit 1
