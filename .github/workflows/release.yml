@@ -33,7 +33,7 @@ jobs:
           USER_ID: ${{ github.event.sender.id }}
           VERSION: ${{ steps.bump-version.outputs.version }}
         run: |
-          git config user.name "$USER_NAME"
+          git config user.name "GitHub Actions"
           git config user.email "$USER_ID+$USER_NAME@users.noreply.github.com"
           git add pyproject.toml
           git commit -m "chore(release): ${VERSION}"
@@ -41,6 +41,8 @@ jobs:
           echo "::set-output name=commit::$(git rev-parse HEAD)"
       - name: Create Release
         uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           tag_name: v${{ steps.bump-version.outputs.version }}
           release_name: junk-drawer ${{ steps.bump-version.outputs.version }}
