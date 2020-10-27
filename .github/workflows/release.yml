@@ -14,8 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.GH_PAT }}
       - uses: actions/setup-python@v2
         with:
           python-version: '3.7'
@@ -28,15 +26,23 @@ jobs:
         run: |
           poetry version $BUMP
           echo "::set-output name=version::$(poetry version | sed 's/^junk-drawer //')"
-      - name: Tag and push
+      - id: commit-version
+        name: Tag and push
         env:
           USER_NAME: ${{ github.actor }}
+          USER_REAL_NAME: ${{ github.event.sender.name }}
           USER_ID: ${{ github.event.sender.id }}
           VERSION: ${{ steps.bump-version.outputs.version }}
         run: |
-          git config user.name "$USER_NAME"
+          git config user.name "$USER_REAL_NAME"
           git config user.email "$USER_ID+$USER_NAME@users.noreply.github.com"
           git add pyproject.toml
           git commit -m "chore(release): ${VERSION}"
-          git tag -a v${VERSION} -m "chore(release): ${VERSION}"
-          git push --follow-tags
+          git push
+          echo "::set-output name=commit::$(git rev-parse HEAD)"
+      - name: Create Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: v${{ steps.bump-version.outputs.version }}
+          release_name: junk-drawer ${{ steps.bump-version.outputs.version }}
+          commitish: ${{ steps.commit-version.outputs.commit }}
