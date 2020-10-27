@@ -4,7 +4,9 @@ from logging import getLogger
 from pathlib import PurePath
 from pydantic import BaseModel
 from typing import (
+    Any,
     Callable,
+    Dict,
     Generic,
     List,
     Optional,
@@ -34,7 +36,7 @@ SCHEMA_VERSION_KEY = "__schema_version__"
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
-Migration = Callable[[dict], dict]
+Migration = Callable[[Dict[str, Any]], Dict[str, Any]]
 
 log = getLogger(__name__)
 
