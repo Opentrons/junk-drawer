@@ -1,6 +1,9 @@
 name: Continuous integration
 
-on: [push]
+on:
+  push:
+  release:
+    types: [published]
 
 jobs:
   test:
@@ -55,7 +58,7 @@ jobs:
         with:
           name: junk-drawer
           path: dist
-      - if: startsWith(github.ref, 'refs/tags/v')
+      - if: github.event_name == 'release'
         name: Deploy to PyPI
         env:
           PYPI_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}

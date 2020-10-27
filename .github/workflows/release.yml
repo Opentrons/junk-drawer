@@ -27,7 +27,7 @@ jobs:
           poetry version $BUMP
           echo "::set-output name=version::$(poetry version | sed 's/^junk-drawer //')"
       - id: commit-version
-        name: Tag and push
+        name: Commit version bump
         env:
           USER_NAME: ${{ github.actor }}
           USER_ID: ${{ github.event.sender.id }}
@@ -39,7 +39,7 @@ jobs:
           git commit -m "chore(release): ${VERSION}"
           git push
           echo "::set-output name=commit::$(git rev-parse HEAD)"
-      - name: Create Release
+      - name: Create release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
