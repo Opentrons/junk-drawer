@@ -1,6 +1,10 @@
 """Tests for the store's JSON and migration handling."""
 import pytest
+from mock import AsyncMock  # type: ignore[attr-defined]
+from pathlib import PurePath
 from pydantic import BaseModel
+from typing import Any, Dict
+
 from junk_drawer import Store
 from .helpers import CoolModel
 
@@ -15,7 +19,9 @@ class StrictModel(CoolModel, BaseModel):
 
 
 @pytest.fixture
-def strict_store(store_path, mock_filesystem) -> Store:
+def strict_store(
+    store_path: PurePath, mock_filesystem: AsyncMock
+) -> Store[StrictModel]:
     """Create a Store with a strict model."""
     return Store(
         directory=store_path,
@@ -28,15 +34,17 @@ def strict_store(store_path, mock_filesystem) -> Store:
 
 
 @pytest.fixture
-def migrations_store(store_path, mock_filesystem) -> Store:
+def migrations_store(
+    store_path: PurePath, mock_filesystem: AsyncMock
+) -> Store[CoolModel]:
     """Create a Store with migrations."""
 
-    def migration_0(obj):
+    def migration_0(obj: Dict[str, Any]) -> Dict[str, Any]:
         """Add "foo" key."""
         obj["foo"] = "hello"
         return obj
 
-    def migration_1(obj):
+    def migration_1(obj: Dict[str, Any]) -> Dict[str, Any]:
         """Add "bar" key."""
         obj["bar"] = 0
         return obj
@@ -51,7 +59,7 @@ def migrations_store(store_path, mock_filesystem) -> Store:
     )
 
 
-def test_encode_json(store):
+def test_encode_json(store: Store[CoolModel]) -> None:
     """It should encode a Pydantic model to a JSON string."""
     model = CoolModel(foo="hello", bar=42)
     result = store.encode_json(model)
@@ -59,7 +67,7 @@ def test_encode_json(store):
     assert result == '{"foo": "hello", "bar": 42, "__schema_version__": 0}'
 
 
-def test_encode_json_with_migrations(migrations_store):
+def test_encode_json_with_migrations(migrations_store: Store[CoolModel]) -> None:
     """It should write the schema version based on migrations."""
     model = CoolModel(foo="hello", bar=42)
     result = migrations_store.encode_json(model)
@@ -67,7 +75,7 @@ def test_encode_json_with_migrations(migrations_store):
     assert result == '{"foo": "hello", "bar": 42, "__schema_version__": 2}'
 
 
-def test_parse_json(store):
+def test_parse_json(store: Store[CoolModel]) -> None:
     """It should parse a JSON string into a Pydantic model."""
     data = '{"foo": "hello", "bar": 42, "__schema_version__": 0}'
     result = store.parse_json(data)
@@ -75,7 +83,7 @@ def test_parse_json(store):
     assert result == CoolModel(foo="hello", bar=42)
 
 
-def test_parse_json_strict(strict_store):
+def test_parse_json_strict(strict_store: Store[StrictModel]) -> None:
     """It should parse a JSON string into a model with extra: forbid."""
     data = '{"foo": "hello", "bar": 42, "__schema_version__": 0}'
     result = strict_store.parse_json(data)
@@ -99,7 +107,9 @@ def test_parse_json_strict(strict_store):
         ),
     ],
 )
-def test_parse_json_with_migrations(migrations_store, data, expected):
+def test_parse_json_with_migrations(
+    migrations_store: Store[CoolModel], data: str, expected: CoolModel
+) -> None:
     """It should parse a JSON string and apply migrations from v0."""
     result = migrations_store.parse_json(data)
 

@@ -3,7 +3,17 @@ from __future__ import annotations
 from logging import getLogger
 from pathlib import PurePath
 from pydantic import BaseModel
-from typing import Callable, Generic, Optional, Sequence, Tuple, TypeVar, Type, Union
+from typing import (
+    Callable,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Type,
+    Union,
+)
 
 from .errors import ItemDecodeError, ItemEncodeError, ItemAccessError
 
@@ -93,11 +103,11 @@ class Store(Generic[ModelT]):
 
         return read_result
 
-    async def get_all_keys(self) -> Sequence[str]:
+    async def get_all_keys(self) -> List[str]:
         """Get all keys in the store."""
         return await self._filesystem.read_dir(self._directory)
 
-    async def get_all_entries(self) -> Sequence[Tuple[str, ModelT]]:
+    async def get_all_entries(self) -> List[Tuple[str, ModelT]]:
         """Get all keys in the store."""
         try:
             dir_entries = await self._filesystem.read_json_dir(
@@ -110,7 +120,7 @@ class Store(Generic[ModelT]):
 
         return [(entry.path.stem, entry.contents) for entry in dir_entries]
 
-    async def get_all_items(self) -> Sequence[ModelT]:
+    async def get_all_items(self) -> List[ModelT]:
         """Get all keys in the store."""
         entries = await self.get_all_entries()
         return [item for key, item in entries]
