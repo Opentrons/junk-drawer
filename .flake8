@@ -11,10 +11,6 @@ extend-ignore =
     ANN101,
     ANN102
 
-# disable type annotation lints (typing is still enabled) in tests
-per-file-ignores =
-    tests/*:,ANN
-
 # configure flake8-docstrings
 # https://pypi.org/project/flake8-docstrings/
 docstring-convention = pep257
