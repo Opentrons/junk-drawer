@@ -142,13 +142,13 @@ Once a `Store` has a migration function in its migrations list, that function **
 
 ### Store.create(directory, schema, primary_key = None, ignore_errors = False, migrations=()) -> Store
 
-| argument        | type              | required | description                                                     |
-| --------------- | ----------------- | -------- | --------------------------------------------------------------- |
-| `directory`     | `str`             | Yes      | Store root directory                                            |
-| `schema`        | `Type[BaseModel]` | Yes      | Document schema                                                 |
-| `primary_key`   | `str`             | No       | Primary key field in `schema`, if applicable                    |
-| `ignore_errors` | `bool`            | No       | Return `None` instead of raising read/parse/write/encode errors |
-| `migrations`    | `List[Migration]` | No       | List of schema migration functions                              |
+| argument        | type                  | required | description                                                     |
+| --------------- | --------------------- | -------- | --------------------------------------------------------------- |
+| `directory`     | `str`                 | Yes      | Store root directory                                            |
+| `schema`        | `Type[BaseModel]`     | Yes      | Document schema                                                 |
+| `primary_key`   | `str`                 | No       | Primary key field in `schema`, if applicable                    |
+| `ignore_errors` | `bool`                | No       | Return `None` instead of raising read/parse/write/encode errors |
+| `migrations`    | `Sequence[Migration]` | No       | Sequence of schema migration functions                          |
 
 ```py
 from junk_drawer import Store
