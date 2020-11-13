@@ -1,4 +1,4 @@
-name: Create a new release
+name: Create release
 
 on:
   workflow_dispatch:
@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GH_PAT }}
       - uses: actions/setup-python@v2
         with:
           python-version: '3.7'
@@ -26,24 +28,15 @@ jobs:
         run: |
           poetry version $BUMP
           echo "::set-output name=version::$(poetry version | sed 's/^junk-drawer //')"
-      - id: commit-version
-        name: Commit version bump
+      - name: Tag and push
         env:
           USER_NAME: ${{ github.actor }}
           USER_ID: ${{ github.event.sender.id }}
           VERSION: ${{ steps.bump-version.outputs.version }}
         run: |
-          git config user.name "GitHub Actions"
+          git config user.name "$USER_NAME (GitHub Actions)"
           git config user.email "$USER_ID+$USER_NAME@users.noreply.github.com"
           git add pyproject.toml
           git commit -m "chore(release): ${VERSION}"
-          git push
-          echo "::set-output name=commit::$(git rev-parse HEAD)"
-      - name: Create release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          tag_name: v${{ steps.bump-version.outputs.version }}
-          release_name: junk-drawer ${{ steps.bump-version.outputs.version }}
-          commitish: ${{ steps.commit-version.outputs.commit }}
+          git tag -a v${VERSION} -m "chore(release): ${VERSION}"
+          git push --follow-tags
