@@ -7,6 +7,20 @@ from junk_drawer.filesystem import AsyncFilesystem, PathNotFoundError, FileEncod
 pytestmark = pytest.mark.asyncio
 
 
+async def test_ensure_dir_creates_directory(
+    tmp_path: Path, filesystem: AsyncFilesystem
+) -> None:
+    """It should ensure a directory exists."""
+    path = tmp_path / "foo"
+
+    await filesystem.ensure_dir(path)
+    assert path.is_dir() is True
+
+    # ensure that subsequent calls do not error
+    await filesystem.ensure_dir(path)
+    assert path.is_dir() is True
+
+
 async def test_remove_deletes_file(tmp_path: Path, filesystem: AsyncFilesystem) -> None:
     """It should delete a given file."""
     path = tmp_path / "foo"
@@ -40,7 +54,7 @@ async def test_remove_dir_deletes_tree(
     assert tmp_path.exists() is False
 
 
-async def test_write_json_enocdes_and_writes_obj(
+async def test_write_json_encodes_and_writes_obj(
     tmp_path: Path, filesystem: AsyncFilesystem
 ) -> None:
     """It should encode and write a JSON object to a file."""

@@ -31,8 +31,72 @@ def default_encode_json(obj: Any) -> str:
     return json_dumps(obj)
 
 
+class SyncFilesystemLike(ABC):
+    """Abstract synchronous filesystem interface."""
+
+    @abstractmethod
+    def ensure_dir(self, path: PurePath) -> PurePath:
+        """Ensure a directory at `path` exists, creating it if it doesn't."""
+        ...
+
+    @abstractmethod
+    def read_dir(self, path: PurePath) -> List[str]:
+        """Get the stem names of all JSON files in the directory."""
+        ...
+
+    @abstractmethod
+    def remove_dir(self, path: PurePath) -> None:
+        """Delete a directory and everything in it."""
+        ...
+
+    @abstractmethod
+    def remove(self, path: PurePath) -> None:
+        """Delete the file at {path}.json."""
+        ...
+
+    @abstractmethod
+    def file_exists(self, path: PurePath) -> bool:
+        """Return True if `{path}.json` is a file."""
+        ...
+
+    @abstractmethod
+    def read_json(
+        self,
+        path: PurePath,
+        parse_json: JSONParser[ResultT],
+    ) -> ResultT:
+        """Read and parse a single JSON file."""
+        ...
+
+    @abstractmethod
+    def read_json_dir(
+        self,
+        path: PurePath,
+        parse_json: JSONParser[ResultT],
+        ignore_errors: bool,
+    ) -> List[DirectoryEntry[ResultT]]:
+        """Read and parse all JSON files in a directory serially."""
+        ...
+
+    @abstractmethod
+    def write_json(
+        self,
+        path: PurePath,
+        contents: ResultT,
+        encode_json: JSONEncoder[ResultT],
+    ) -> None:
+        """Write a dictionary object to a JSON file at {path}.json."""
+        ...
+
+
 class AsyncFilesystemLike(ABC):
     """Abstract asynchronous filesystem interface."""
+
+    @property
+    @abstractmethod
+    def sync(self) -> SyncFilesystemLike:
+        """Get the filesystem's underlying synchronous interface."""
+        ...
 
     @abstractmethod
     async def ensure_dir(self, path: PurePath) -> PurePath:

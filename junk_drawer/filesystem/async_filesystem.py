@@ -1,20 +1,10 @@
 """Async threadpool-based JSON filesystem."""
-import asyncio
+from __future__ import annotations
+from asyncio import get_event_loop, gather, AbstractEventLoop
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from logging import getLogger
-from pathlib import Path, PurePath
-from shutil import rmtree
+from pathlib import PurePath
 from typing import List, Optional
-
-from .errors import (
-    PathNotFoundError,
-    FileReadError,
-    FileWriteError,
-    FileParseError,
-    FileEncodeError,
-    FileRemoveError,
-)
 
 from .base import (
     default_parse_json,
@@ -26,8 +16,7 @@ from .base import (
     DirectoryEntry,
 )
 
-
-log = getLogger(__name__)
+from .sync_filesystem import SyncFilesystem
 
 
 class AsyncFilesystem(AsyncFilesystemLike):
@@ -38,38 +27,53 @@ class AsyncFilesystem(AsyncFilesystemLike):
     asyncio event loop's default ThreadPoolExecutor.
     """
 
-    def __init__(self, executor: Optional[ThreadPoolExecutor] = None) -> None:
+    _sync_filesystem: SyncFilesystem
+    _executor: Optional[ThreadPoolExecutor]
+
+    @classmethod
+    def create(
+        cls,
+        executor: Optional[ThreadPoolExecutor] = None,
+    ) -> AsyncFilesystem:
+        """Create an AsyncFilesystem with backing synchronous logic."""
+        return cls(
+            sync_filesystem=SyncFilesystem(),
+            executor=executor,
+        )
+
+    def __init__(
+        self,
+        sync_filesystem: SyncFilesystem,
+        executor: Optional[ThreadPoolExecutor] = None,
+    ) -> None:
         """Initialize an AsyncFilesystem adapter."""
-        self._loop = asyncio.get_event_loop()
+        self._sync_filesystem = sync_filesystem
         self._executor = executor
+
+    @property
+    def _loop(self) -> AbstractEventLoop:
+        return get_event_loop()
+
+    @property
+    def sync(self) -> SyncFilesystem:
+        """Get the underlying synchronous filesystem interface."""
+        return self._sync_filesystem
 
     async def ensure_dir(self, path: PurePath) -> PurePath:
         """Ensure a directory at `path` exists, creating it if it doesn't."""
-        real_path = Path(path)
-        task = partial(real_path.mkdir, parents=True, exist_ok=True)
-
+        task = partial(self.sync.ensure_dir, path=path)
         await self._loop.run_in_executor(self._executor, task)
-
         return path
 
     async def read_dir(self, path: PurePath) -> List[str]:
         """Get the stem names of all JSON files in the directory."""
-        real_path = Path(path)
-        children = await self._loop.run_in_executor(self._executor, real_path.iterdir)
-
-        return [
-            child.stem
-            for child in children
-            if child.suffix == ".json" and not child.name.startswith(".")
-        ]
+        task = partial(self.sync.read_dir, path=path)
+        return await self._loop.run_in_executor(self._executor, task)
 
     async def file_exists(self, path: PurePath) -> bool:
         """Return True if `{path}.json` is a file."""
-        real_path = Path(path.with_suffix(".json"))
-        task = real_path.is_file
-        exists = await self._loop.run_in_executor(self._executor, task)
-
-        return exists
+        task = partial(self.sync.file_exists, path=path)
+        return await self._loop.run_in_executor(self._executor, task)
 
     async def read_json(
         self,
@@ -77,30 +81,11 @@ class AsyncFilesystem(AsyncFilesystemLike):
         parse_json: JSONParser[ResultT] = default_parse_json,
     ) -> ResultT:
         """Read and parse a single JSON file."""
+        task: partial[ResultT] = partial(
+            self.sync.read_json, path=path, parse_json=parse_json
+        )
 
-        def _read_and_parse() -> ResultT:
-            file_path = Path(path).with_suffix(".json")
-
-            try:
-                text = file_path.read_text()
-            except FileNotFoundError as error:
-                raise PathNotFoundError(str(error)) from error
-            except Exception as error:
-                # NOTE: this except branch is not covered by tests, but is important
-                log.debug(f"Unexpected error reading {file_path}", exc_info=error)
-                raise FileReadError(str(error)) from error
-
-            try:
-                result = parse_json(text)
-            except Exception as error:
-                # this should only happen if the file being read has been modified
-                # outside of this library or a defective custom JSON encoder was used
-                log.debug(f"Unexpected error parsing {file_path}", exc_info=error)
-                raise FileParseError(str(error)) from error
-
-            return result
-
-        return await self._loop.run_in_executor(self._executor, _read_and_parse)
+        return await self._loop.run_in_executor(self._executor, task)
 
     async def read_json_dir(
         self,
@@ -117,7 +102,7 @@ class AsyncFilesystem(AsyncFilesystemLike):
 
         children = await self.read_dir(path)
         tasks = [_read_entry(child) for child in children]
-        entries = await asyncio.gather(*tasks, return_exceptions=ignore_errors)
+        entries = await gather(*tasks, return_exceptions=ignore_errors)
 
         if ignore_errors:
             entries = [entry for entry in entries if not isinstance(entry, Exception)]
@@ -131,45 +116,20 @@ class AsyncFilesystem(AsyncFilesystemLike):
         encode_json: JSONEncoder[ResultT] = default_encode_json,
     ) -> None:
         """Write an object to a JSON file."""
-        file_path = Path(path.with_suffix(".json"))
+        task = partial(
+            self.sync.write_json, path=path, contents=contents, encode_json=encode_json
+        )
 
-        def _encode_and_write() -> None:
-            try:
-                encoded_contents = encode_json(contents)
-            except Exception as error:
-                log.debug(f"Unexpected error encoding for {file_path}", exc_info=error)
-                raise FileEncodeError(str(error)) from error
-
-            try:
-                file_path.write_text(encoded_contents)
-            except Exception as error:
-                # NOTE: this except branch is not covered by tests, but is important
-                log.debug(f"Unexpected error writing to {file_path}", exc_info=error)
-                raise FileWriteError(str(error)) from error
-
-        await self._loop.run_in_executor(self._executor, _encode_and_write)
-
-        return None
+        return await self._loop.run_in_executor(self._executor, task)
 
     async def remove(self, path: PurePath) -> None:
         """Delete a JSON file."""
-        file_path = Path(path.with_suffix(".json"))
+        task = partial(self.sync.remove, path=path)
 
-        try:
-            await self._loop.run_in_executor(self._executor, file_path.unlink)
-        except FileNotFoundError as error:
-            raise PathNotFoundError(str(error)) from error
-        except Exception as error:
-            # NOTE: this except branch is not covered by tests, but is important
-            log.debug(f"Unexpected error reading {file_path}", exc_info=error)
-            raise FileRemoveError(str(error)) from error
-
-        return None
+        return await self._loop.run_in_executor(self._executor, task)
 
     async def remove_dir(self, path: PurePath) -> None:
         """Delete all files in the given directory and the directory."""
-        task = partial(rmtree, path=path)
+        task = partial(self.sync.remove_dir, path=path)
 
-        await self._loop.run_in_executor(self._executor, task)
-
-        return None
+        return await self._loop.run_in_executor(self._executor, task)
