@@ -2,7 +2,7 @@
 import pytest
 from pathlib import Path, PurePath
 from junk_drawer import Store
-from junk_drawer.filesystem import AsyncFilesystemLike, AsyncFilesystem
+from junk_drawer.filesystem import SyncFilesystem, AsyncFilesystem
 from .helpers import CoolModel
 
 # TODO(mc, 2020-09-28): mypy doesn't know about mock.AsyncMock
@@ -15,13 +15,19 @@ STORE_PATH_STR = "./store"
 @pytest.fixture
 def mock_filesystem() -> AsyncMock:
     """Create a mock asynchronous filesystem."""
-    return AsyncMock(spec=AsyncFilesystemLike)
+    return AsyncMock(spec=AsyncFilesystem)
 
 
 @pytest.fixture
-def filesystem() -> AsyncFilesystem:
+def sync_filesystem() -> SyncFilesystem:
+    """Create a real synchronous filesystem."""
+    return SyncFilesystem()
+
+
+@pytest.fixture
+def filesystem(sync_filesystem: SyncFilesystem) -> AsyncFilesystem:
     """Create a real asynchronous filesystem."""
-    return AsyncFilesystem()
+    return AsyncFilesystem(sync_filesystem=sync_filesystem)
 
 
 @pytest.fixture

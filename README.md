@@ -27,7 +27,7 @@ async def main():
     store = await Store.create("path/to/store", schema=MyModel)
 ```
 
-A store can be used to save and retrieve multiple items conforming to the same schema. Use [Pydantic][] to define your model shape. When this store is initialized, it will create the directory `${cwd}/path/to/store` if it doesn't already exist.
+A store can be used to save and retrieve multiple items conforming to the same schema. Use [Pydantic][] to define your model shape. When this store is created, it will create the directory `${cwd}/path/to/store` if it doesn't already exist.
 
 [pydantic]: https://pydantic-docs.helpmanual.io/
 
@@ -138,7 +138,31 @@ Once a `Store` has a migration function in its migrations list, that function **
 
 **Migrations happen lazily on read** whenever a given item is accessed. If an item exists on disk at a previous schema version and is never written to, the on-disk representation will remain at the previous version.
 
+### Synchronous vs Asynchronous Usage
+
+All "default" methods of the store are asynchronous, and run their file I/O, parsing, and encoding operations in an [asyncio][] [thread pool][]. In general, using these asynchronous methods is good because you can avoid blocking your main application thread(s). However, in some instances, synchronous, blocking behavior is preferred.
+
+All `Store` methods have a `_sync` counterpart that allows interacting with the store synchronously. Always carefully consider whether you _really_ need to use the store synchronously, as certain actions (e.g. retrieving all items in a large store, parsing complex models) may block for a while, preventing your application from responding to other requests.
+
+```py
+from junk_drawer import Store
+from pydantic import BaseModel
+
+class MyModel(BaseModel):
+    name: str
+
+def main():
+    store = Store.create_sync("path/to/store", schema=MyModel)
+    item_key = store.put_sync(MyModel(name="fizzbuzz"), "some-key")
+    item = store.get_sync(item_key)
+```
+
+[asyncio]: https://docs.python.org/3/library/asyncio.html
+[thread pool]: https://docs.python.org/3/library/asyncio-eventloop.html#executing-code-in-thread-or-process-pools
+
 ## Reference
+
+All methods of `Store` listed below are `async` and should be `await`ed. To use synchronously, append `_sync` to a given method's name.
 
 ### Store.create(directory, schema, primary_key = None, ignore_errors = False, migrations=()) -> Store
 
@@ -162,8 +186,6 @@ async def main():
 ```
 
 Creates a `Store` instance to store items in a given directory relative to the current working directory. Do not configure multiple stores for the same directory.
-
-Unless otherwise noted, all methods of a `Store` are `async` and should be `await`ed.
 
 ### store.get(key: str) -> Optional[BaseModel]
 

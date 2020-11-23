@@ -131,3 +131,17 @@ async def test_store_write_and_read_with_migrations(real_store_path: PurePath) -
     result = await new_store.get(item_key)
 
     assert result == CoolModel(foo="hello", bar="world", baz=0)
+
+
+def test_store_sync_write_and_read(real_store_path: PurePath) -> None:
+    """A store should be able to write and read a file."""
+    store = Store.create_sync(real_store_path, schema=CoolModel)
+    item = CoolModel(foo="hello", bar="world")
+
+    key = store.put_sync(item, "foo")
+
+    assert key == "foo"
+
+    result = store.get_sync(key)
+
+    assert result == CoolModel(foo="hello", bar="world")
