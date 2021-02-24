@@ -1,6 +1,6 @@
 """Entrypoint and end-to-end tests for junk_drawer."""
 import pytest
-from pathlib import PurePath
+from pathlib import Path, PurePath
 from pydantic import BaseModel
 from junk_drawer import Store
 from typing import Optional
@@ -24,7 +24,7 @@ class OldModel(BaseModel):
 
 async def test_store_write_and_read(real_store_path: PurePath) -> None:
     """A store should be able to write and read a file."""
-    store = await Store.create(real_store_path, schema=CoolModel)
+    store = Store.create(real_store_path, schema=CoolModel)
     item = CoolModel(foo="hello", bar="world")
 
     key = await store.put(item, "foo")
@@ -38,7 +38,7 @@ async def test_store_write_and_read(real_store_path: PurePath) -> None:
 
 async def test_store_write_and_read_dir(real_store_path: PurePath) -> None:
     """A store should be able to write and read the whole store."""
-    store = await Store.create(real_store_path, schema=CoolModel)
+    store = Store.create(real_store_path, schema=CoolModel)
 
     # TODO(mc, 2020-10-03): replace with store.add
     await store.put(CoolModel(foo="hello", bar="world"), "foo")
@@ -53,7 +53,7 @@ async def test_store_write_and_read_dir(real_store_path: PurePath) -> None:
 
 async def test_store_write_and_ensure(real_store_path: PurePath) -> None:
     """A store should be able to write and read a file."""
-    store = await Store.create(real_store_path, schema=CoolModel)
+    store = Store.create(real_store_path, schema=CoolModel)
     default_item = CoolModel(foo="default", bar="value")
     item = CoolModel(foo="hello", bar="world")
 
@@ -68,7 +68,7 @@ async def test_store_write_and_ensure(real_store_path: PurePath) -> None:
 
 async def test_keyed_store_write_and_read(real_store_path: PurePath) -> None:
     """A store should be able to write and read a file."""
-    store = await Store.create(real_store_path, schema=CoolModel, primary_key="foo")
+    store = Store.create(real_store_path, schema=CoolModel, primary_key="foo")
     item = CoolModel(foo="hello", bar="world")
 
     key = await store.put(item)
@@ -82,7 +82,7 @@ async def test_keyed_store_write_and_read(real_store_path: PurePath) -> None:
 
 async def test_keyed_store_write_and_read_dir(real_store_path: PurePath) -> None:
     """A store should be able to write and read the whole store."""
-    store = await Store.create(real_store_path, schema=CoolModel, primary_key="foo")
+    store = Store.create(real_store_path, schema=CoolModel, primary_key="foo")
 
     # TODO(mc, 2020-10-03): replace with store.add
     await store.put(CoolModel(foo="hello", bar="world"))
@@ -97,7 +97,7 @@ async def test_keyed_store_write_and_read_dir(real_store_path: PurePath) -> None
 
 async def test_keyed_store_write_and_ensure(real_store_path: PurePath) -> None:
     """A store should be able to write and read a file."""
-    store = await Store.create(real_store_path, schema=CoolModel, primary_key="foo")
+    store = Store.create(real_store_path, schema=CoolModel, primary_key="foo")
     default_item = CoolModel(foo="some-key", bar="hello world")
     item = CoolModel(foo="some-key", bar="oh hai")
 
@@ -112,14 +112,14 @@ async def test_keyed_store_write_and_ensure(real_store_path: PurePath) -> None:
 
 async def test_store_write_and_read_with_migrations(real_store_path: PurePath) -> None:
     """A store should be able to write and read a file."""
-    old_store = await Store.create(real_store_path, schema=OldModel)
+    old_store = Store.create(real_store_path, schema=OldModel)
 
     item_key = "some-key"
     item = OldModel(foo="hello")
 
     await old_store.put(item, item_key)
 
-    new_store = await Store.create(
+    new_store = Store.create(
         real_store_path,
         schema=CoolModel,
         migrations=(
@@ -134,8 +134,8 @@ async def test_store_write_and_read_with_migrations(real_store_path: PurePath) -
 
 
 def test_store_sync_write_and_read(real_store_path: PurePath) -> None:
-    """A store should be able to write and read a file."""
-    store = Store.create_sync(real_store_path, schema=CoolModel)
+    """A store should be able to write and read a file synchronously."""
+    store = Store.create(real_store_path, schema=CoolModel)
     item = CoolModel(foo="hello", bar="world")
 
     key = store.put_sync(item, "foo")
@@ -145,3 +145,18 @@ def test_store_sync_write_and_read(real_store_path: PurePath) -> None:
     result = store.get_sync(key)
 
     assert result == CoolModel(foo="hello", bar="world")
+
+
+async def test_store_write_and_read_with_nested_keys(real_store_path: PurePath) -> None:
+    """A store should be able to write and read a file synchronously."""
+    store = Store.create(real_store_path, schema=CoolModel)
+    item = CoolModel(foo="hello", bar="world")
+
+    key = await store.put(item, "foo/bar/baz")
+
+    assert key == "foo/bar/baz"
+
+    result = await store.get(key)
+
+    assert result == CoolModel(foo="hello", bar="world")
+    assert Path(real_store_path / "foo" / "bar" / "baz.json").exists()

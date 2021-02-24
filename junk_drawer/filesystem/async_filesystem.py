@@ -3,7 +3,7 @@ from __future__ import annotations
 from asyncio import get_event_loop, gather, AbstractEventLoop
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from pathlib import PurePath
+from pathlib import PurePath, PurePosixPath
 from typing import List, Optional
 
 from .base import (
@@ -96,7 +96,7 @@ class AsyncFilesystem(AsyncFilesystemLike):
         """Read and parse all JSON files in a directory concurrently."""
 
         async def _read_entry(child: str) -> DirectoryEntry[ResultT]:
-            child_path = path / child
+            child_path = PurePosixPath(path / child)
             child_contents = await self.read_json(child_path, parse_json)
             return DirectoryEntry(path=child_path, contents=child_contents)
 

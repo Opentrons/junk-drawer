@@ -154,6 +154,27 @@ async def test_read_json_dir_reads_multiple_files(
     assert Entry(path=path / "baz", contents={"foo": "other side", "bar": 2}) in files
 
 
+async def test_read_json_dir_reads_multiple_files_nested(
+    tmp_path: Path, filesystem: AsyncFilesystem
+) -> None:
+    """It should read a all nested files in a directory."""
+    Path(tmp_path / "some-dir").mkdir()
+    Path(tmp_path / "some-dir" / "foo.json").write_text(
+        """{ "foo": "hello", "bar": 0 }"""
+    )
+    Path(tmp_path / "bar.json").write_text("""{ "foo": "from the", "bar": 1 }""")
+
+    path = PurePath(tmp_path)
+    files: List[Entry[ParsedObj]] = await filesystem.read_json_dir(path)
+
+    assert len(files) == 2
+    assert (
+        Entry(path=path / "some-dir" / "foo", contents={"foo": "hello", "bar": 0})
+        in files
+    )
+    assert Entry(path=path / "bar", contents={"foo": "from the", "bar": 1}) in files
+
+
 async def test_read_json_dir_can_ignore_errors(
     tmp_path: Path, filesystem: AsyncFilesystem
 ) -> None:

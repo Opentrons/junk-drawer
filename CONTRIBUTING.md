@@ -27,7 +27,7 @@ All tasks should be run in the virtualenv by using `poetry run` or by activating
 poetry run pytest
 
 # run tests in watch mode
-poetry run ptw
+poetry run pytest --looponfail --color="yes"
 
 # run formatting
 poetry run black .

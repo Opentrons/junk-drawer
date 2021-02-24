@@ -48,7 +48,7 @@ def test_read_dir_with_empty_dir(
 def test_read_dir_with_dir_of_json_files(
     tmp_path: Path, sync_filesystem: SyncFilesystem
 ) -> None:
-    """It should return a list oj JSON basenames with read_dir."""
+    """It should return a list of JSON basenames with read_dir."""
     (tmp_path / "foo.json").touch()
     (tmp_path / "bar.json").touch()
     (tmp_path / "baz.json").touch()
@@ -67,6 +67,18 @@ def test_read_dir_ignores_non_json_and_dotfiles(
     basenames = sync_filesystem.read_dir(tmp_path)
 
     assert basenames == ["foo"]
+
+
+def test_read_dir_walks_directories(
+    tmp_path: Path, sync_filesystem: SyncFilesystem
+) -> None:
+    """It should ignore include files nested in directories in read_dir."""
+    (tmp_path / "foo.json").touch()
+    (tmp_path / "bar").mkdir()
+    (tmp_path / "bar" / "baz.json").touch()
+    basenames = sync_filesystem.read_dir(tmp_path)
+
+    assert basenames == ["foo", "bar/baz"]
 
 
 def test_file_exists_returns_false_if_no_file(
@@ -150,6 +162,27 @@ def test_read_json_dir_reads_multiple_files(
     assert Entry(path=path / "foo", contents={"foo": "hello", "bar": 0}) in files
     assert Entry(path=path / "bar", contents={"foo": "from the", "bar": 1}) in files
     assert Entry(path=path / "baz", contents={"foo": "other side", "bar": 2}) in files
+
+
+def test_read_json_dir_reads_multiple_files_nested(
+    tmp_path: Path, sync_filesystem: SyncFilesystem
+) -> None:
+    """It should read a all nested files in a directory."""
+    Path(tmp_path / "some-dir").mkdir()
+    Path(tmp_path / "some-dir" / "foo.json").write_text(
+        """{ "foo": "hello", "bar": 0 }"""
+    )
+    Path(tmp_path / "bar.json").write_text("""{ "foo": "from the", "bar": 1 }""")
+
+    path = PurePath(tmp_path)
+    files: List[Entry[ParsedObj]] = sync_filesystem.read_json_dir(path)
+
+    assert len(files) == 2
+    assert (
+        Entry(path=path / "some-dir" / "foo", contents={"foo": "hello", "bar": 0})
+        in files
+    )
+    assert Entry(path=path / "bar", contents={"foo": "from the", "bar": 1}) in files
 
 
 def test_read_json_dir_can_ignore_errors(

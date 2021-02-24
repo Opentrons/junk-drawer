@@ -24,7 +24,7 @@ class MyModel(BaseModel):
     name: str
 
 async def main():
-    store = await Store.create("path/to/store", schema=MyModel)
+    store = Store.create("path/to/store", schema=MyModel)
 ```
 
 A store can be used to save and retrieve multiple items conforming to the same schema. Use [Pydantic][] to define your model shape. When this store is created, it will create the directory `${cwd}/path/to/store` if it doesn't already exist.
@@ -35,7 +35,7 @@ A store can be used to save and retrieve multiple items conforming to the same s
 
 ```py
 async def main():
-    store = await Store.create("path/to/store", schema=MyModel)
+    store = Store.create("path/to/store", schema=MyModel)
     item = await store.get("some-key")
 ```
 
@@ -57,7 +57,7 @@ The store has the following methods for getting items and keys from the store.
 ```py
 async def main():
     item = MyModel(name="fizzbuzz")
-    store = await Store.create("path/to/store", schema=MyModel)
+    store = Store.create("path/to/store", schema=MyModel)
     item_key = await store.put(item, "some-key")
 ```
 
@@ -85,7 +85,7 @@ class KeyedModel(BaseModel):
 
 async def main():
     item = ModelWithKey(uid=uuid4(), name="fizzbuzz")
-    store = await Store.create("store", schema=KeyedModel, primary_key="uid")
+    store = Store.create("store", schema=KeyedModel, primary_key="uid")
     item_key = await store.put(item)
 ```
 
@@ -96,7 +96,7 @@ If you specify the `primary_key` option when creating the store, `put` and `ensu
 ```py
 async def main():
     item = MyModel(name="fizzbuzz")
-    store = await Store.create("path/to/store", schema=MyModel)
+    store = Store.create("path/to/store", schema=MyModel)
 
     removed_key = await store.delete("some-key")
 ```
@@ -123,7 +123,7 @@ def migration_v2(prev: Dict[str, Any]) -> Dict[str, Any]:
     return next_model
 
 async def main():
-    store = await Store.create(
+    store = Store.create(
         "./data/existing_store",
         schema=MyModel,
         migrations=(migration_v1, migration_v2)
@@ -182,7 +182,7 @@ class MyModel(BaseModel):
     name: str
 
 async def main():
-    store = await Store.create("path/to/store", schema=MyModel)
+    store = Store.create("path/to/store", schema=MyModel)
 ```
 
 Creates a `Store` instance to store items in a given directory relative to the current working directory. Do not configure multiple stores for the same directory.
@@ -201,7 +201,7 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     scissors = await store.get("my-scissors")
 ```
 
@@ -217,7 +217,7 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     all_scissors = await store.get_all_items()
 ```
 
@@ -233,7 +233,7 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     all_scissor_keys = await store.get_all_keys()
 ```
 
@@ -249,7 +249,7 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     all_scissor_entries = await store.get_all_entries()
 ```
 
@@ -270,7 +270,7 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     scissors = Scissors(left_handed=true)
     scissors_key = await store.put(scissors, "my-scissors")
 ```
@@ -293,7 +293,7 @@ class Scissors(BaseModel):
 
 async def main():
     default_scissors = Scissors(left_handed=true)
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     scissors = await store.ensure(default_scissors, "my-scissors")
 ```
 
@@ -313,7 +313,7 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     scissors_key = await store.put(Scissors(left_handed=true), "key")
     await store.delete(scissors_key)
 ```
@@ -330,7 +330,7 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     await store.delete_store()
 ```
 

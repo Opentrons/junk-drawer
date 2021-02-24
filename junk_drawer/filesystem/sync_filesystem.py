@@ -1,6 +1,6 @@
 """Synchronous JSON filesystem."""
 from logging import getLogger
-from pathlib import Path, PurePath
+from pathlib import Path, PurePath, PurePosixPath
 from shutil import rmtree
 from typing import List, Optional
 
@@ -37,12 +37,12 @@ class SyncFilesystem(SyncFilesystemLike):
 
     def read_dir(self, path: PurePath) -> List[str]:
         """Get the stem names of all JSON files in the directory."""
-        children = Path(path).iterdir()
+        file_paths = Path(path).glob("**/*.json")
 
         return [
-            child.stem
-            for child in children
-            if child.suffix == ".json" and not child.name.startswith(".")
+            str(file_path.relative_to(path).with_suffix("").as_posix())
+            for file_path in file_paths
+            if not file_path.stem.startswith(".")
         ]
 
     def file_exists(self, path: PurePath) -> bool:
@@ -85,7 +85,7 @@ class SyncFilesystem(SyncFilesystemLike):
         """Read and parse all JSON files in a directory serially."""
 
         def _read_entry(child: str) -> Optional[DirectoryEntry[ResultT]]:
-            child_path = path / child
+            child_path = PurePosixPath(path / child)
 
             try:
                 child_contents = self.read_json(child_path, parse_json)
@@ -117,6 +117,7 @@ class SyncFilesystem(SyncFilesystemLike):
             raise FileEncodeError(str(error)) from error
 
         try:
+            self.ensure_dir(file_path.parent)
             file_path.write_text(encoded_contents)
         except Exception as error:
             # NOTE: this except branch is not covered by tests, but is important
