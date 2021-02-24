@@ -1,7 +1,7 @@
 """Read-only store module for junk_drawer."""
 from __future__ import annotations
 from logging import getLogger
-from pathlib import PurePath, PurePosixPath
+from pathlib import PurePosixPath
 from pydantic import BaseModel
 from typing import (
     Any,
@@ -43,12 +43,12 @@ log = getLogger(__name__)
 
 
 class ReadStore(Generic[ModelT]):
-    """A Store class is used to manage reading a collection of items."""
+    """A ReadStore is used to read items in a collection."""
 
     @classmethod
     def create(
         cls: Type[StoreT],
-        directory: Union[str, PurePath],
+        directory: Union[str, PurePosixPath],
         schema: Type[ModelT],
         *,
         primary_key: Optional[str] = None,
@@ -56,7 +56,7 @@ class ReadStore(Generic[ModelT]):
         ignore_errors: bool = False,
     ) -> StoreT:
         """Create a new ReadStore."""
-        directory = PurePath(directory)
+        directory = PurePosixPath(directory)
         filesystem = AsyncFilesystem.create()
 
         return cls(
@@ -70,7 +70,7 @@ class ReadStore(Generic[ModelT]):
 
     def __init__(
         self,
-        directory: PurePath,
+        directory: PurePosixPath,
         schema: Type[ModelT],
         *,
         primary_key: Optional[str],
@@ -192,7 +192,7 @@ class ReadStore(Generic[ModelT]):
 
         return self._schema.parse_obj(obj)
 
-    def _get_key_path(self, key: str) -> PurePath:
+    def _get_key_path(self, key: str) -> PurePosixPath:
         return PurePosixPath(self._directory / key)
 
     def _get_item_key(self, item: ModelT, key: Optional[str]) -> str:

@@ -1,6 +1,6 @@
 """Store tests for junk_drawer."""
 import pytest
-from pathlib import PurePath
+from pathlib import PurePosixPath
 from mock import AsyncMock  # type: ignore[attr-defined]
 
 from junk_drawer import ReadStore
@@ -19,7 +19,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_store_exists_with_nonexistent_key(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should return False from store.exists if file doesn't exist."""
     mock_filesystem.file_exists.return_value = False
@@ -30,7 +30,7 @@ async def test_store_exists_with_nonexistent_key(
 
 
 def test_store_exists_sync_with_nonexistent_key(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should return False from store.exists if file doesn't exist."""
     mock_filesystem.sync.file_exists.return_value = False
@@ -61,7 +61,7 @@ def test_store_exists_sync_with_existing_key(
 
 
 async def test_store_get_with_nonexistent_key(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should return None from store.get if file doesn't exist."""
     mock_filesystem.read_json.side_effect = PathNotFoundError()
@@ -74,7 +74,7 @@ async def test_store_get_with_nonexistent_key(
 
 
 def test_store_get_sync_with_nonexistent_key(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should return None from store.get if file doesn't exist."""
     mock_filesystem.sync.read_json.side_effect = PathNotFoundError()
@@ -87,7 +87,7 @@ def test_store_get_sync_with_nonexistent_key(
 
 
 async def test_store_get_returns_read_result(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should return a model from store.get if file exists."""
     result = CoolModel(foo="bar", bar=42)
@@ -101,7 +101,7 @@ async def test_store_get_returns_read_result(
 
 
 def test_store_get_sync_returns_read_result(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should return a model from store.get if file exists."""
     result = CoolModel(foo="bar", bar=42)
@@ -115,7 +115,7 @@ def test_store_get_sync_returns_read_result(
 
 
 async def test_store_get_returns_read_result_from_deep_key(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should return a model from store.get if deep file exists."""
     result = CoolModel(foo="bar", bar=42)
@@ -129,7 +129,7 @@ async def test_store_get_returns_read_result_from_deep_key(
 
 
 def test_store_get_sync_returns_read_result_from_deep_key(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should return a model from store.get if deep file exists."""
     result = CoolModel(foo="bar", bar=42)
@@ -143,7 +143,7 @@ def test_store_get_sync_returns_read_result_from_deep_key(
 
 
 async def test_store_get_all_keys_reads_dir(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should read the directory and return all JSON files as keys."""
     mock_filesystem.read_dir.return_value = ["foo", "bar", "baz"]
@@ -154,7 +154,7 @@ async def test_store_get_all_keys_reads_dir(
 
 
 def test_store_get_all_keys_sync_reads_dir(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should read the directory and return all JSON files as keys."""
     mock_filesystem.sync.read_dir.return_value = ["foo", "bar", "baz"]
@@ -165,7 +165,7 @@ def test_store_get_all_keys_sync_reads_dir(
 
 
 async def test_store_get_all_entries_reads_dir(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should reads for all files in the directory to get all entries."""
     mock_filesystem.read_json_dir.return_value = [
@@ -184,7 +184,7 @@ async def test_store_get_all_entries_reads_dir(
 
 
 def test_store_get_all_entries_sync_reads_dir(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should reads for all files in the directory to get all entries."""
     mock_filesystem.sync.read_json_dir.return_value = [
@@ -203,7 +203,7 @@ def test_store_get_all_entries_sync_reads_dir(
 
 
 async def test_store_get_all_items_reads_dir(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should read all files in the directory to get all items."""
     mock_filesystem.read_json_dir.return_value = [
@@ -222,7 +222,7 @@ async def test_store_get_all_items_reads_dir(
 
 
 async def test_store_get_all_items_sync_reads_dir(
-    store: ReadStore[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: ReadStore[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """It should read all files in the directory to get all items."""
     mock_filesystem.sync.read_json_dir.return_value = [
@@ -286,7 +286,7 @@ async def test_store_get_raises_read_error(
 
 async def test_silenced_validation_error(
     ignore_errors_store: ReadStore[CoolModel],
-    store_path: PurePath,
+    store_path: PurePosixPath,
     mock_filesystem: AsyncMock,
 ) -> None:
     """It should return None in case of a validation error if set to not raise."""

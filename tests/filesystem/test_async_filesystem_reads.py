@@ -1,7 +1,7 @@
 """Integration tests for AsyncFilesystem read operations."""
 import pytest
 from mock import MagicMock
-from pathlib import Path, PurePath
+from pathlib import Path, PurePosixPath
 from typing import Any, Dict, List
 
 from junk_drawer.filesystem import (
@@ -21,7 +21,7 @@ async def test_ensure_dir_noops_when_dir_exists(
 ) -> None:
     """It should do nothing with ensure_dir if the directory already exists."""
     tmp_path.mkdir(exist_ok=True)
-    dir_name = PurePath(tmp_path)
+    dir_name = PurePosixPath(tmp_path)
     result = await filesystem.ensure_dir(dir_name)
 
     assert dir_name == result
@@ -31,7 +31,7 @@ async def test_ensure_dir_creates_dir(
     tmp_path: Path, filesystem: AsyncFilesystem
 ) -> None:
     """It should create a directory with ensure_dir if it doesn't exist."""
-    dir_name = PurePath(tmp_path) / "the_limit_does_not_exist"
+    dir_name = PurePosixPath(tmp_path) / "the_limit_does_not_exist"
     result = await filesystem.ensure_dir(dir_name)
 
     assert result == dir_name
@@ -75,7 +75,7 @@ async def test_file_exists_returns_false_if_no_file(
     tmp_path: Path, filesystem: AsyncFilesystem
 ) -> None:
     """It should return False with file_exists if no JSON files exist."""
-    path = PurePath(tmp_path / "foo")
+    path = PurePosixPath(tmp_path / "foo")
     exists = await filesystem.file_exists(path)
 
     assert exists is False
@@ -86,7 +86,7 @@ async def test_file_exists_returns_true_if_file_exists(
 ) -> None:
     """It should return True with file_exists if JSON file exists."""
     (tmp_path / "foo.json").touch()
-    path = PurePath(tmp_path / "foo")
+    path = PurePosixPath(tmp_path / "foo")
     exists = await filesystem.file_exists(path)
 
     assert exists is True
@@ -97,7 +97,7 @@ async def test_file_exists_returns_false_if_path_is_directory(
 ) -> None:
     """It should return False with file_exists if path points to directory."""
     (tmp_path / "foo.json").mkdir()
-    path = PurePath(tmp_path / "foo")
+    path = PurePosixPath(tmp_path / "foo")
     exists = await filesystem.file_exists(path)
 
     assert exists is False
@@ -109,7 +109,7 @@ async def test_read_json_loads_json_file_to_dict(
     """It should read a file and load the contents into JSON."""
     Path(tmp_path / "foo.json").write_text("""{ "foo": "hello", "bar": 42 }""")
 
-    path = PurePath(tmp_path / "foo")
+    path = PurePosixPath(tmp_path / "foo")
     result: ParsedObj = await filesystem.read_json(path)
 
     assert result == {"foo": "hello", "bar": 42}
@@ -119,7 +119,7 @@ async def test_read_json_raises_path_does_not_exist_error(
     tmp_path: Path, filesystem: AsyncFilesystem
 ) -> None:
     """It should return a FileNotFoundError if file doesn't exist."""
-    path = PurePath(tmp_path / "foo")
+    path = PurePosixPath(tmp_path / "foo")
 
     with pytest.raises(PathNotFoundError, match="No such file or directory"):
         await filesystem.read_json(path)
@@ -131,7 +131,7 @@ async def test_read_json_raises_parse_error(
     """It should raise a FileParseError if file is not valid JSON."""
     Path(tmp_path / "foo.json").write_text("""{ "foo": "hello", }""")
 
-    path = PurePath(tmp_path / "foo")
+    path = PurePosixPath(tmp_path / "foo")
 
     with pytest.raises(FileParseError, match="Expecting property name"):
         await filesystem.read_json(path)
@@ -145,7 +145,7 @@ async def test_read_json_dir_reads_multiple_files(
     Path(tmp_path / "bar.json").write_text("""{ "foo": "from the", "bar": 1 }""")
     Path(tmp_path / "baz.json").write_text("""{ "foo": "other side", "bar": 2 }""")
 
-    path = PurePath(tmp_path)
+    path = PurePosixPath(tmp_path)
     files: List[Entry[ParsedObj]] = await filesystem.read_json_dir(path)
 
     assert len(files) == 3
@@ -164,7 +164,7 @@ async def test_read_json_dir_reads_multiple_files_nested(
     )
     Path(tmp_path / "bar.json").write_text("""{ "foo": "from the", "bar": 1 }""")
 
-    path = PurePath(tmp_path)
+    path = PurePosixPath(tmp_path)
     files: List[Entry[ParsedObj]] = await filesystem.read_json_dir(path)
 
     assert len(files) == 2
@@ -182,7 +182,7 @@ async def test_read_json_dir_can_ignore_errors(
     Path(tmp_path / "foo.json").write_text("""{ "foo": "hello", "bar": 0 }""")
     Path(tmp_path / "bar.json").write_text("""{ "foo": "from the",}""")
 
-    path = PurePath(tmp_path)
+    path = PurePosixPath(tmp_path)
     files: List[Entry[ParsedObj]] = await filesystem.read_json_dir(
         path, ignore_errors=True
     )
@@ -197,7 +197,7 @@ async def test_read_json_with_custom_parser(
     Path(tmp_path / "foo.json").write_text("""{ "this": "is crazy" }""")
 
     mock_parse_json.return_value = {"call me": "maybe"}
-    path = PurePath(tmp_path / "foo")
+    path = PurePosixPath(tmp_path / "foo")
     result = await filesystem.read_json(path, parse_json=mock_parse_json)
 
     assert result == {"call me": "maybe"}
@@ -212,7 +212,7 @@ async def test_read_json_when_custom_parser_raises(
 
     error = Exception("oh no")
     mock_parse_json.side_effect = error
-    path = PurePath(tmp_path / "foo")
+    path = PurePosixPath(tmp_path / "foo")
 
     with pytest.raises(FileParseError):
         await filesystem.read_json(path, parse_json=mock_parse_json)
@@ -227,7 +227,7 @@ async def test_read_json_dir_with_custom_parser(
     Path(tmp_path / "baz.json").write_text("""{ "foo": "other side", "bar": 2 }""")
 
     mock_parse_json.return_value = {"call me": "maybe"}
-    path = PurePath(tmp_path)
+    path = PurePosixPath(tmp_path)
     files = await filesystem.read_json_dir(path, parse_json=mock_parse_json)
 
     assert len(files) == 3

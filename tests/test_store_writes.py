@@ -1,7 +1,7 @@
 """Store tests for junk_drawer."""
 import pytest
 from mock import AsyncMock  # type: ignore[attr-defined]
-from pathlib import PurePath
+from pathlib import PurePosixPath
 
 from junk_drawer import Store
 from junk_drawer.errors import ItemAccessError, ItemEncodeError
@@ -18,7 +18,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_delete_store(
-    store: Store[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: Store[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """store.delete_store should remove the directory."""
     await store.delete_store()
@@ -26,7 +26,7 @@ async def test_delete_store(
 
 
 def test_delete_store_sync(
-    store: Store[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: Store[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """store.delete_store should remove the directory."""
     store.delete_store_sync()
@@ -34,7 +34,7 @@ def test_delete_store_sync(
 
 
 async def test_delete_item(
-    store: Store[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: Store[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """store.delete should remove a file."""
     key = "delete-me"
@@ -45,7 +45,7 @@ async def test_delete_item(
 
 
 async def test_delete_sync(
-    store: Store[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: Store[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """store.delete_sync should remove a file."""
     key = "delete-me"
@@ -100,7 +100,7 @@ def test_delete_sync_with_access_error(
 
 
 async def test_store_put(
-    store: Store[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: Store[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """store.put should call filesystem.write_json."""
     key = "cool-key"
@@ -116,7 +116,7 @@ async def test_store_put(
 
 
 def test_store_put_sync(
-    store: Store[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: Store[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """store.put should call filesystem.write_json."""
     key = "cool-key"
@@ -176,7 +176,7 @@ def test_store_put_sync_raises_encode_error(
 
 
 async def test_store_put_with_primary_key(
-    keyed_store: Store[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    keyed_store: Store[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """store.put should pull primary key from the model if available."""
     item = CoolModel(foo="hello", bar=0)
@@ -191,7 +191,7 @@ async def test_store_put_with_primary_key(
 
 
 def test_store_put_sync_with_primary_key(
-    keyed_store: Store[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    keyed_store: Store[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """store.put_sync should pull primary key from the model if available."""
     item = CoolModel(foo="hello", bar=0)
@@ -248,7 +248,7 @@ def test_store_put_sync_missing_key_asserts(
 
 
 async def test_store_put_bad_primary_key_asserts(
-    store_path: PurePath, mock_filesystem: AsyncMock
+    store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """store.put should assert if primary_key isn't in the model."""
     store = Store(
@@ -266,7 +266,7 @@ async def test_store_put_bad_primary_key_asserts(
 
 
 def test_store_put_sync_bad_primary_key_asserts(
-    store_path: PurePath, mock_filesystem: AsyncMock
+    store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """store.put_sync should assert if primary_key isn't in the model."""
     store = Store(
@@ -340,7 +340,7 @@ def test_store_ensure_sync(store: Store[CoolModel], mock_filesystem: AsyncMock) 
 
 
 async def test_store_ensure_writes_default(
-    store: Store[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: Store[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """store.ensure should write default item and return it."""
     default_item = CoolModel(foo="foo", bar=0)
@@ -357,7 +357,7 @@ async def test_store_ensure_writes_default(
 
 
 def test_store_ensure_sync_writes_default(
-    store: Store[CoolModel], store_path: PurePath, mock_filesystem: AsyncMock
+    store: Store[CoolModel], store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> None:
     """store.ensure_sync should write default item and return it."""
     default_item = CoolModel(foo="foo", bar=0)

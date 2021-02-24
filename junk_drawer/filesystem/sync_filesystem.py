@@ -1,6 +1,6 @@
 """Synchronous JSON filesystem."""
 from logging import getLogger
-from pathlib import Path, PurePath, PurePosixPath
+from pathlib import Path, PurePosixPath
 from shutil import rmtree
 from typing import List, Optional
 
@@ -30,12 +30,12 @@ log = getLogger(__name__)
 class SyncFilesystem(SyncFilesystemLike):
     """Synchronous JSON filesystem adapter."""
 
-    def ensure_dir(self, path: PurePath) -> PurePath:
+    def ensure_dir(self, path: PurePosixPath) -> PurePosixPath:
         """Ensure a directory at `path` exists, creating it if it doesn't."""
         Path(path).mkdir(parents=True, exist_ok=True)
         return path
 
-    def read_dir(self, path: PurePath) -> List[str]:
+    def read_dir(self, path: PurePosixPath) -> List[str]:
         """Get the stem names of all JSON files in the directory."""
         file_paths = Path(path).glob("**/*.json")
 
@@ -45,13 +45,13 @@ class SyncFilesystem(SyncFilesystemLike):
             if not file_path.stem.startswith(".")
         ]
 
-    def file_exists(self, path: PurePath) -> bool:
+    def file_exists(self, path: PurePosixPath) -> bool:
         """Return True if `{path}.json` is a file."""
         return Path(path.with_suffix(".json")).is_file()
 
     def read_json(
         self,
-        path: PurePath,
+        path: PurePosixPath,
         parse_json: JSONParser[ResultT] = default_parse_json,
     ) -> ResultT:
         """Read and parse a single JSON file."""
@@ -78,7 +78,7 @@ class SyncFilesystem(SyncFilesystemLike):
 
     def read_json_dir(
         self,
-        path: PurePath,
+        path: PurePosixPath,
         parse_json: JSONParser[ResultT] = default_parse_json,
         ignore_errors: bool = False,
     ) -> List[DirectoryEntry[ResultT]]:
@@ -103,7 +103,7 @@ class SyncFilesystem(SyncFilesystemLike):
 
     def write_json(
         self,
-        path: PurePath,
+        path: PurePosixPath,
         contents: ResultT,
         encode_json: JSONEncoder[ResultT] = default_encode_json,
     ) -> None:
@@ -117,7 +117,7 @@ class SyncFilesystem(SyncFilesystemLike):
             raise FileEncodeError(str(error)) from error
 
         try:
-            self.ensure_dir(file_path.parent)
+            self.ensure_dir(path.parent)
             file_path.write_text(encoded_contents)
         except Exception as error:
             # NOTE: this except branch is not covered by tests, but is important
@@ -126,7 +126,7 @@ class SyncFilesystem(SyncFilesystemLike):
 
         return None
 
-    def remove(self, path: PurePath) -> None:
+    def remove(self, path: PurePosixPath) -> None:
         """Delete a JSON file."""
         file_path = Path(path.with_suffix(".json"))
 
@@ -141,7 +141,7 @@ class SyncFilesystem(SyncFilesystemLike):
 
         return None
 
-    def remove_dir(self, path: PurePath) -> None:
+    def remove_dir(self, path: PurePosixPath) -> None:
         """Delete all files in the given directory and the directory."""
         rmtree(path=path)
 

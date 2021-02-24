@@ -16,7 +16,7 @@ log = getLogger(__name__)
 
 
 class Store(ReadStore[ModelT]):
-    """A Store class is used to create and manage a collection of items."""
+    """A Store is used to create, read, update, and delete items in a collection."""
 
     async def put(self, item: ModelT, key: Optional[str] = None) -> Optional[str]:
         """
