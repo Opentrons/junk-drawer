@@ -62,6 +62,16 @@ def test_write_json_encodes_and_writes_obj(
     assert path.with_suffix(".json").read_text() == """{"foo": "hello", "bar": 0}"""
 
 
+def test_write_json_creates_dirs_if_necessary(
+    tmp_path: Path, sync_filesystem: SyncFilesystem
+) -> None:
+    """It should create directories as necessary to reach the path."""
+    path = tmp_path / "foo" / "bar" / "baz"
+    sync_filesystem.write_json(path, {"foo": "hello", "bar": 0})
+
+    assert path.with_suffix(".json").read_text() == """{"foo": "hello", "bar": 0}"""
+
+
 def test_write_json_raises_encode_error(
     tmp_path: Path, sync_filesystem: SyncFilesystem
 ) -> None:

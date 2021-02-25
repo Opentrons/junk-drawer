@@ -1,6 +1,6 @@
 """Global test configuration."""
 import pytest
-from pathlib import Path, PurePath
+from pathlib import Path, PurePosixPath
 from junk_drawer import Store
 from junk_drawer.filesystem import SyncFilesystem, AsyncFilesystem
 from .helpers import CoolModel
@@ -43,19 +43,19 @@ def mock_encode_json() -> MagicMock:
 
 
 @pytest.fixture
-def store_path() -> PurePath:
+def store_path() -> PurePosixPath:
     """Store fixture directory path."""
-    return PurePath(STORE_PATH_STR)
+    return PurePosixPath(STORE_PATH_STR)
 
 
 @pytest.fixture
-def real_store_path(tmp_path: Path) -> PurePath:
+def real_store_path(tmp_path: Path) -> PurePosixPath:
     """Actual Store directory path."""
-    return PurePath(tmp_path) / STORE_PATH_STR
+    return PurePosixPath(tmp_path) / STORE_PATH_STR
 
 
 @pytest.fixture
-def store(store_path: PurePath, mock_filesystem: AsyncMock) -> Store[CoolModel]:
+def store(store_path: PurePosixPath, mock_filesystem: AsyncMock) -> Store[CoolModel]:
     """Create a fresh Store with a mock filesystem."""
     return Store(
         directory=store_path,
@@ -68,7 +68,9 @@ def store(store_path: PurePath, mock_filesystem: AsyncMock) -> Store[CoolModel]:
 
 
 @pytest.fixture
-def keyed_store(store_path: PurePath, mock_filesystem: AsyncMock) -> Store[CoolModel]:
+def keyed_store(
+    store_path: PurePosixPath, mock_filesystem: AsyncMock
+) -> Store[CoolModel]:
     """Create a Store with a primary key mock filesystem."""
     return Store(
         directory=store_path,
@@ -82,7 +84,7 @@ def keyed_store(store_path: PurePath, mock_filesystem: AsyncMock) -> Store[CoolM
 
 @pytest.fixture
 def ignore_errors_store(
-    store_path: PurePath, mock_filesystem: AsyncMock
+    store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> Store[CoolModel]:
     """Create a Store with errors ignored."""
     return Store(

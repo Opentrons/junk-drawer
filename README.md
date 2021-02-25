@@ -24,18 +24,35 @@ class MyModel(BaseModel):
     name: str
 
 async def main():
-    store = await Store.create("path/to/store", schema=MyModel)
+    store = Store.create("path/to/store", schema=MyModel)
 ```
 
 A store can be used to save and retrieve multiple items conforming to the same schema. Use [Pydantic][] to define your model shape. When this store is created, it will create the directory `${cwd}/path/to/store` if it doesn't already exist.
 
+**Note:** If you use a string to create your store's directory, the string will always be interpreted as a POSIX path, using `/` as directory separators.
+
 [pydantic]: https://pydantic-docs.helpmanual.io/
+
+#### Read only store
+
+If you have a set of items in your filesystem that you'd like to have a read-only interface to, you may create a `ReadStore`. A `ReadStore` has the same interface as a full `Store`, excepting any methods that add, update, or remove items in the store.
+
+```py
+from junk_drawer import ReadStore
+from pydantic import BaseModel
+
+class MyModel(BaseModel):
+    name: str
+
+async def main():
+    store = ReadStore.create("path/to/store", schema=MyModel)
+```
 
 ### Get an item from the store
 
 ```py
 async def main():
-    store = await Store.create("path/to/store", schema=MyModel)
+    store = Store.create("path/to/store", schema=MyModel)
     item = await store.get("some-key")
 ```
 
@@ -52,12 +69,14 @@ The store has the following methods for getting items and keys from the store.
 - `store.get_all_entries()`
   - Returns all items in the store zipped in tuples with their keys
 
+**Note:** A key may contain forward slashes (`/`). The store will interpret forward slashes in a key as additional directories in the path to the item.
+
 ### Put an item in the store
 
 ```py
 async def main():
     item = MyModel(name="fizzbuzz")
-    store = await Store.create("path/to/store", schema=MyModel)
+    store = Store.create("path/to/store", schema=MyModel)
     item_key = await store.put(item, "some-key")
 ```
 
@@ -85,7 +104,7 @@ class KeyedModel(BaseModel):
 
 async def main():
     item = ModelWithKey(uid=uuid4(), name="fizzbuzz")
-    store = await Store.create("store", schema=KeyedModel, primary_key="uid")
+    store = Store.create("store", schema=KeyedModel, primary_key="uid")
     item_key = await store.put(item)
 ```
 
@@ -96,7 +115,7 @@ If you specify the `primary_key` option when creating the store, `put` and `ensu
 ```py
 async def main():
     item = MyModel(name="fizzbuzz")
-    store = await Store.create("path/to/store", schema=MyModel)
+    store = Store.create("path/to/store", schema=MyModel)
 
     removed_key = await store.delete("some-key")
 ```
@@ -123,7 +142,7 @@ def migration_v2(prev: Dict[str, Any]) -> Dict[str, Any]:
     return next_model
 
 async def main():
-    store = await Store.create(
+    store = Store.create(
         "./data/existing_store",
         schema=MyModel,
         migrations=(migration_v1, migration_v2)
@@ -162,13 +181,13 @@ def main():
 
 ## Reference
 
-All methods of `Store` listed below are `async` and should be `await`ed. To use synchronously, append `_sync` to a given method's name.
+Besides `Store.create`, all methods of `Store` listed below are `async` and should be `await`ed. To use synchronously, append `_sync` to a given method's name.
 
 ### Store.create(directory, schema, primary_key = None, ignore_errors = False, migrations=()) -> Store
 
 | argument        | type                  | required | description                                                     |
 | --------------- | --------------------- | -------- | --------------------------------------------------------------- |
-| `directory`     | `str`                 | Yes      | Store root directory                                            |
+| `directory`     | `str`                 | Yes      | Store root directory, in POSIX format                           |
 | `schema`        | `Type[BaseModel]`     | Yes      | Document schema                                                 |
 | `primary_key`   | `str`                 | No       | Primary key field in `schema`, if applicable                    |
 | `ignore_errors` | `bool`                | No       | Return `None` instead of raising read/parse/write/encode errors |
@@ -182,7 +201,7 @@ class MyModel(BaseModel):
     name: str
 
 async def main():
-    store = await Store.create("path/to/store", schema=MyModel)
+    store = Store.create("path/to/store", schema=MyModel)
 ```
 
 Creates a `Store` instance to store items in a given directory relative to the current working directory. Do not configure multiple stores for the same directory.
@@ -201,7 +220,7 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     scissors = await store.get("my-scissors")
 ```
 
@@ -217,11 +236,11 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     all_scissors = await store.get_all_items()
 ```
 
-Returns a list of all items in the store. If items are not using a `primary_key`, use `get_all_entries` to get items and their associated keys. The order of the items is arbitrary (it depends on [`os.listdir`](https://docs.python.org/3/library/os.html#os.listdir)).
+Returns a list of all items in the store. If items are not using a `primary_key`, use `get_all_entries` to get items and their associated keys. The order of the entries may be arbitrary (it depends on [`Path.glob`](https://docs.python.org/3/library/pathlib.html#pathlib.Path.glob)).
 
 ### store.get_all_keys() -> List[str]
 
@@ -233,11 +252,11 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     all_scissor_keys = await store.get_all_keys()
 ```
 
-Returns a list of all keys in the store. May return more keys than actual valid documents if there are invalid JSON files in the store directory. The order of the keys is arbitrary (it depends on [`os.listdir`](https://docs.python.org/3/library/os.html#os.listdir)).
+Returns a list of all keys in the store. May return more keys than actual valid documents if there are invalid JSON files in the store directory. The order of the entries may be arbitrary (it depends on [`Path.glob`](https://docs.python.org/3/library/pathlib.html#pathlib.Path.glob)).
 
 ### store.get_all_entries() -> List[Tuple[str, BaseModel]]
 
@@ -249,11 +268,11 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     all_scissor_entries = await store.get_all_entries()
 ```
 
-Returns a zipped list of all key/item pairs in the store. Useful if you're not using `primary_key` but you still need to get all items and their associated keys. The order of the entries is arbitrary (it depends on [`os.listdir`](https://docs.python.org/3/library/os.html#os.listdir)).
+Returns a zipped list of all key/item pairs in the store. Useful if you're not using `primary_key` but you still need to get all items and their associated keys. The order of the entries may be arbitrary (it depends on [`Path.glob`](https://docs.python.org/3/library/pathlib.html#pathlib.Path.glob)).
 
 ### store.put(item: BaseModel, key: Optional[str] = None) -> Optional[str]
 
@@ -270,12 +289,14 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     scissors = Scissors(left_handed=true)
     scissors_key = await store.put(scissors, "my-scissors")
 ```
 
 Add an item into the store, serializing `item` to JSON and placing it in `${store_name}/${key}.json`. Will replace the item with `key` if it already exists.
+
+**Note:** This method is not present in `ReadStore`.
 
 ### store.ensure(default_item: BaseModel, key: Optional[str] = None) -> BaseModel
 
@@ -293,11 +314,13 @@ class Scissors(BaseModel):
 
 async def main():
     default_scissors = Scissors(left_handed=true)
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     scissors = await store.ensure(default_scissors, "my-scissors")
 ```
 
 Get an item by key from the store. If no item with that key exists, adds `default_item` to the store before returning the item. Effectively a shortcut for a `get` followed by a `put` if the `get` returns `None`.
+
+**Note:** This method is not present in `ReadStore`.
 
 ### store.delete(key: str) -> Optional[str]
 
@@ -313,12 +336,14 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     scissors_key = await store.put(Scissors(left_handed=true), "key")
     await store.delete(scissors_key)
 ```
 
 Removes the document with key `key` from the store. Returns the key of the item it removed or `None` if no item at that key was found.
+
+**Note:** This method is not present in `ReadStore`.
 
 ### store.delete_store() -> None
 
@@ -330,11 +355,13 @@ class Scissors(BaseModel):
   left_handed: bool
 
 async def main():
-    store = await Store.create("scissors", schema=Scissors)
+    store = Store.create("scissors", schema=Scissors)
     await store.delete_store()
 ```
 
 Deletes the backing directory and all files for the store.
+
+**Note:** This method is not present in `ReadStore`.
 
 ### Migration
 
