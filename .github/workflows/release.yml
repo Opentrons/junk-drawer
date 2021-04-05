@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: 'Version string or a bump rule from `poetry version`.'
+        description: 'Version string or a bump rule.'
         required: true
         default: 'minor'
 
@@ -13,4 +13,30 @@ jobs:
     name: Bump the package version
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Not implemented" && exit 1
+      - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GH_PAT }}
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Install dependencies
+        run: pip install poetry
+      - id: bump-version
+        name: Bump version
+        env:
+          BUMP: ${{ github.event.inputs.bump }}
+        run: |
+          poetry version $BUMP
+          echo "::set-output name=version::$(poetry version | sed 's/^junk-drawer //')"
+      - name: Tag and push
+        env:
+          USER_NAME: ${{ github.actor }}
+          USER_ID: ${{ github.event.sender.id }}
+          VERSION: ${{ steps.bump-version.outputs.version }}
+        run: |
+          git config user.name "$USER_NAME (GitHub Actions)"
+          git config user.email "$USER_ID+$USER_NAME@users.noreply.github.com"
+          git add pyproject.toml
+          git commit -m "chore(release): ${VERSION}"
+          git tag -a v${VERSION} -m "chore(release): ${VERSION}"
+          git push --follow-tags
