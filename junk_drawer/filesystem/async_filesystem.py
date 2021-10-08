@@ -3,7 +3,7 @@ from __future__ import annotations
 from asyncio import get_event_loop, gather, AbstractEventLoop
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from pathlib import PurePath
+from pathlib import PurePosixPath
 from typing import List, Optional
 
 from .base import (
@@ -59,25 +59,25 @@ class AsyncFilesystem(AsyncFilesystemLike):
         """Get the underlying synchronous filesystem interface."""
         return self._sync_filesystem
 
-    async def ensure_dir(self, path: PurePath) -> PurePath:
+    async def ensure_dir(self, path: PurePosixPath) -> PurePosixPath:
         """Ensure a directory at `path` exists, creating it if it doesn't."""
         task = partial(self.sync.ensure_dir, path=path)
         await self._loop.run_in_executor(self._executor, task)
         return path
 
-    async def read_dir(self, path: PurePath) -> List[str]:
+    async def read_dir(self, path: PurePosixPath) -> List[str]:
         """Get the stem names of all JSON files in the directory."""
         task = partial(self.sync.read_dir, path=path)
         return await self._loop.run_in_executor(self._executor, task)
 
-    async def file_exists(self, path: PurePath) -> bool:
+    async def file_exists(self, path: PurePosixPath) -> bool:
         """Return True if `{path}.json` is a file."""
         task = partial(self.sync.file_exists, path=path)
         return await self._loop.run_in_executor(self._executor, task)
 
     async def read_json(
         self,
-        path: PurePath,
+        path: PurePosixPath,
         parse_json: JSONParser[ResultT] = default_parse_json,
     ) -> ResultT:
         """Read and parse a single JSON file."""
@@ -89,14 +89,14 @@ class AsyncFilesystem(AsyncFilesystemLike):
 
     async def read_json_dir(
         self,
-        path: PurePath,
+        path: PurePosixPath,
         parse_json: JSONParser[ResultT] = default_parse_json,
         ignore_errors: bool = False,
     ) -> List[DirectoryEntry[ResultT]]:
         """Read and parse all JSON files in a directory concurrently."""
 
         async def _read_entry(child: str) -> DirectoryEntry[ResultT]:
-            child_path = path / child
+            child_path = PurePosixPath(path / child)
             child_contents = await self.read_json(child_path, parse_json)
             return DirectoryEntry(path=child_path, contents=child_contents)
 
@@ -111,7 +111,7 @@ class AsyncFilesystem(AsyncFilesystemLike):
 
     async def write_json(
         self,
-        path: PurePath,
+        path: PurePosixPath,
         contents: ResultT,
         encode_json: JSONEncoder[ResultT] = default_encode_json,
     ) -> None:
@@ -122,13 +122,13 @@ class AsyncFilesystem(AsyncFilesystemLike):
 
         return await self._loop.run_in_executor(self._executor, task)
 
-    async def remove(self, path: PurePath) -> None:
+    async def remove(self, path: PurePosixPath) -> None:
         """Delete a JSON file."""
         task = partial(self.sync.remove, path=path)
 
         return await self._loop.run_in_executor(self._executor, task)
 
-    async def remove_dir(self, path: PurePath) -> None:
+    async def remove_dir(self, path: PurePosixPath) -> None:
         """Delete all files in the given directory and the directory."""
         task = partial(self.sync.remove_dir, path=path)
 

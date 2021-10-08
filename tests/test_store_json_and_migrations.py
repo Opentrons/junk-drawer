@@ -1,7 +1,7 @@
 """Tests for the store's JSON and migration handling."""
 import pytest
 from mock import AsyncMock  # type: ignore[attr-defined]
-from pathlib import PurePath
+from pathlib import PurePosixPath
 from pydantic import BaseModel
 from typing import Any, Dict
 
@@ -20,7 +20,7 @@ class StrictModel(CoolModel, BaseModel):
 
 @pytest.fixture
 def strict_store(
-    store_path: PurePath, mock_filesystem: AsyncMock
+    store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> Store[StrictModel]:
     """Create a Store with a strict model."""
     return Store(
@@ -35,7 +35,7 @@ def strict_store(
 
 @pytest.fixture
 def migrations_store(
-    store_path: PurePath, mock_filesystem: AsyncMock
+    store_path: PurePosixPath, mock_filesystem: AsyncMock
 ) -> Store[CoolModel]:
     """Create a Store with migrations."""
 
